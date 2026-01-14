@@ -256,7 +256,7 @@ Acclimate.run(cli);
 ```ts
 import { Acclimate } from "acclimate";
 
-const init = Acclimate.createCLI("init")
+const initCmd = Acclimate.createCLI("init")
   .description("Initialize a project")
   .action(({ verbose }) => {
     console.log(`init (verbose=${verbose})`);
@@ -270,7 +270,7 @@ const root = Acclimate.createCLI("acme")
     aliases: ["-v"] as const,
     defaultValue: false,
   })
-  .addCommand("init", init);
+  .addCommand("init", initCmd);
 
 Acclimate.run(root);
 ```
