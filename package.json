@@ -1,0 +1,66 @@
+{
+  "name": "acclimate",
+  "version": "0.1.0",
+  "description": "A lightweight TypeScript framework for building CLI tools.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --write",
+    "format:fix": "prettier . --write",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "demo": "tsx examples/basic.ts",
+    "prepare": "npm run build",
+    "type": "tsc -p tsconfig.json --noEmit"
+  },
+  "keywords": [
+    "cli",
+    "framework",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "dependencies": {
+    "change-case": "^5.4.4",
+    "ts-pattern": "^5.9.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.0",
+    "@types/node": "^22.19.2",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^9.1.2",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import-x": "^4.16.1",
+    "eslint-plugin-unused-imports": "^4.3.0",
+    "prettier": "^3.7.4",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "type-fest": "^5.3.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.49.0",
+    "vitest": "^2.1.9"
+  }
+}
