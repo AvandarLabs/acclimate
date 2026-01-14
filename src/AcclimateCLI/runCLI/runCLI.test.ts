@@ -267,6 +267,19 @@ describe("runCLI - global options", () => {
 });
 
 describe("runCLI - commands", () => {
+  it("runs a command with no arguments", () => {
+    const rootAction = vi.fn<(args: ActionArgs) => void>();
+    const devCommandAction = vi.fn<(args: ActionArgs) => void>();
+
+    const cli = createCLI("root")
+      .addCommand("dev", createCLI("dev").action(devCommandAction))
+      .action(rootAction);
+
+    runCLI({ cli, input: ["dev"] });
+
+    expect(devCommandAction).toHaveBeenCalled();
+  });
+
   it("runs a command action instead of the root action", () => {
     const rootAction = vi.fn<(args: ActionArgs) => void>();
     const commandAction = vi.fn<(args: ActionArgs) => void>();
