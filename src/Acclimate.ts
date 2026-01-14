@@ -1,6 +1,6 @@
 import { createCLI } from "./AcclimateCLI";
 import { runCLI } from "./AcclimateCLI/runCLI/runCLI";
-import type { IAcclimateCLI } from "./AcclimateCLI/AcclimateCLI.types";
+import type { AnyCLI, IAcclimateCLI } from "./AcclimateCLI/AcclimateCLI.types";
 
 type Acclimate = {
   /**
@@ -19,12 +19,12 @@ type Acclimate = {
    *
    * @param cli - The CLI instance to run.
    */
-  run: (cli: IAcclimateCLI) => void;
+  run: (cli: AnyCLI) => void;
 };
 
 export const Acclimate: Acclimate = {
   createCLI,
-  run: (cli: IAcclimateCLI) => {
+  run: (cli: AnyCLI) => {
     runCLI({ cli, input: process.argv.slice(2) });
   },
 };
