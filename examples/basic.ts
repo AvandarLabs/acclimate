@@ -1,13 +1,14 @@
 import { Acclimate } from "../src/Acclimate";
 
 const SubCommandCLI = Acclimate.createCLI("dev").action(() => {
-  console.log("Running sub-command");
+  Acclimate.log("|cyan|Running $command$...|reset|", { command: "dev" });
+  Acclimate.log("Finished running command.");
 });
 
 const cli = Acclimate.createCLI("demo-cli")
   .addCommand("dev", SubCommandCLI)
   .action(() => {
-    console.log("Hello, world!");
+    Acclimate.log("|green|Hello, $name$!|reset|", { name: "world" });
   });
 
 Acclimate.run(cli);
