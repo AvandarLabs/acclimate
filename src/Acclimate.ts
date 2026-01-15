@@ -109,7 +109,11 @@ export const Acclimate: Acclimate = {
     runCLI({ cli, input: process.argv.slice(2) });
   },
   log: (message: string, params: Record<string, string> = {}) => {
-    const interpolated = interpolateParams(message, params);
+    const hasColorToken = Boolean(message.match(COLOR_TOKEN_REGEX));
+    const endsWithReset = message.trimEnd().endsWith("|reset|");
+    const withReset =
+      hasColorToken && !endsWithReset ? `${message}|reset|` : message;
+    const interpolated = interpolateParams(withReset, params);
     const colorized = applyColors(interpolated);
     console.log(colorized);
   },

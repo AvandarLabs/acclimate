@@ -1,7 +1,7 @@
 import { Acclimate } from "../src/Acclimate";
 
 const SubCommandCLI = Acclimate.createCLI("dev").action(() => {
-  Acclimate.log("|cyan|Running $command$...|reset|", { command: "dev" });
+  Acclimate.log("|cyan|Running $command$...", { command: "dev" });
   Acclimate.log("Finished running command.");
 });
 
