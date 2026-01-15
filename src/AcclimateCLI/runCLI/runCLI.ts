@@ -60,24 +60,12 @@ function _parseAndValidateValue<
   inputValue: string | undefined;
   defaultValue: PValue | undefined;
   paramConfig: P;
-}): PValue {
+}): PValue | undefined {
   const { inputValue, defaultValue, paramConfig } = options;
   if (inputValue === undefined) {
-    // if there is no input value, we use the default value for validation.
-    // if there is no default value, we throw an error.
     if (defaultValue === undefined) {
-      if (_isValidFullOptionName(paramConfig.name)) {
-        throw CLIError.missingRequiredOption({
-          optionName: paramConfig.name,
-        });
-      } else {
-        throw CLIError.missingRequiredPositionalArg({
-          positionalArgName: paramConfig.name,
-        });
-      }
+      return undefined;
     }
-
-    // and then just validate it. (no need to parse it first)
     return _validateParsedValue({
       parsedValue: defaultValue,
       paramConfig,

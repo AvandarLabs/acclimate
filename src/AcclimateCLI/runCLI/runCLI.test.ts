@@ -431,4 +431,38 @@ describe("runCLI - commands", () => {
 
     expect(rootAction).not.toHaveBeenCalled();
   });
+
+  it.only("parses required positional and optional options in deeply nested sub-commands", () => {
+    const newModelAction = vi.fn<(args: ActionArgs) => void>();
+
+    const newModelCLI = createCLI("new")
+      .addPositionalArg({
+        name: "modelName",
+        description: "PascalCased model name (e.g. QueryColumn).",
+        type: "string",
+        required: true,
+      })
+      .addOption({
+        name: "--path",
+        aliases: ["-p"],
+        description:
+          "Output path where the `<ModelName>/` sub-directory will be placed",
+        type: "string",
+        required: false,
+      })
+      .action(newModelAction);
+    const modelsCLI = createCLI("new").addCommand("new", newModelCLI);
+    const devCLI = createCLI("dev").addCommand("models", modelsCLI);
+    const rootCLI = createCLI("root").addCommand("dev", devCLI);
+
+    runCLI({
+      cli: rootCLI,
+      input: ["dev", "models", "new", "Dashboard"],
+    });
+
+    expect(newModelAction).toHaveBeenCalledWith({
+      modelName: "Dashboard",
+      path: undefined,
+    });
+  });
 });
