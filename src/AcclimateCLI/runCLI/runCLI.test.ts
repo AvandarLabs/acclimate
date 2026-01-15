@@ -432,7 +432,7 @@ describe("runCLI - commands", () => {
     expect(rootAction).not.toHaveBeenCalled();
   });
 
-  it.only("parses required positional and optional options in deeply nested sub-commands", () => {
+  it("parses required positional and optional options in deeply nested sub-commands", () => {
     const newModelAction = vi.fn<(args: ActionArgs) => void>();
 
     const newModelCLI = createCLI("new")

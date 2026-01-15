@@ -34,8 +34,13 @@ export function AcclimateCLI<
   TGlobalOptionParams,
   TCommands
 > {
+  const cliName = state.name;
   return {
     state,
+
+    getName: () => {
+      return cliName;
+    },
 
     action: (
       action: (
@@ -86,6 +91,7 @@ export function AcclimateCLI<
         })
       ) {
         throw CLIError.invalidPositionalArgConfig({
+          cliName,
           positionalArgName: param.name,
           message:
             "Required positional arguments must be before optional positional arguments",
@@ -188,6 +194,7 @@ export function AcclimateCLI<
       const cmd = state.commands[commandName];
       if (!cmd) {
         throw CLIError.unknownCommand({
+          cliName,
           commandName,
           message: `Command "${commandName}" not found`,
         });

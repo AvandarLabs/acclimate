@@ -33,8 +33,8 @@ function isEmptyObject(obj: object): obj is EmptyObject {
 function _validateParsedValue<
   P extends CLIParam<string>,
   PValue extends ValueOfParam<P>,
->(options: { parsedValue: PValue; paramConfig: P }): PValue {
-  const { parsedValue, paramConfig } = options;
+>(options: { parsedValue: PValue; paramConfig: P; cliName: string }): PValue {
+  const { parsedValue, paramConfig, cliName } = options;
   if (paramConfig.validator) {
     const validator = paramConfig.validator as (
       value: PValue,
@@ -44,6 +44,7 @@ function _validateParsedValue<
       return parsedValue;
     }
     throw CLIError.invalidCLIParamValue({
+      cliName,
       paramName: paramConfig.name,
       paramValue: parsedValue,
       message:
@@ -57,16 +58,18 @@ function _parseAndValidateValue<
   P extends CLIParam<string>,
   PValue extends ValueOfParam<P>,
 >(options: {
+  cliName: string;
   inputValue: string | undefined;
   defaultValue: PValue | undefined;
   paramConfig: P;
 }): PValue | undefined {
-  const { inputValue, defaultValue, paramConfig } = options;
+  const { cliName, inputValue, defaultValue, paramConfig } = options;
   if (inputValue === undefined) {
     if (defaultValue === undefined) {
       return undefined;
     }
     return _validateParsedValue({
+      cliName,
       parsedValue: defaultValue,
       paramConfig,
     });
@@ -90,6 +93,7 @@ function _parseAndValidateValue<
           return inputValue;
         }) as PValue);
   return _validateParsedValue({
+    cliName,
     parsedValue,
     paramConfig,
   });
@@ -188,10 +192,13 @@ function _runCLIHelper<
     });
   }
 
+  const cliName = cli.getName();
+
   // build the positional arguments dictionary
   // first check that we haven't supplied too many positional arguments
   if (rawPositionalArgs.length > cli.state.positionalArgs.length) {
     throw CLIError.tooManyPositionalArgs({
+      cliName,
       count: rawPositionalArgs.length,
     });
   }
@@ -202,10 +209,12 @@ function _runCLIHelper<
       const rawVal = rawPositionalArgs[idx];
       if (argConfig.required && rawVal === undefined) {
         throw CLIError.missingRequiredPositionalArg({
+          cliName,
           positionalArgName: argConfig.name,
         });
       }
       acc[argConfig.name] = _parseAndValidateValue({
+        cliName,
         inputValue: rawVal,
         defaultValue: argConfig.defaultValue,
         paramConfig: argConfig,
@@ -223,11 +232,13 @@ function _runCLIHelper<
       const rawVal = rawOptionArgs[argConfig.name];
       if (argConfig.required && rawVal === undefined) {
         throw CLIError.missingRequiredOption({
+          cliName,
           optionName: argConfig.name,
         });
       }
 
       acc[camelCase(argConfig.name)] = _parseAndValidateValue({
+        cliName,
         inputValue: rawVal,
         defaultValue: argConfig.defaultValue,
         paramConfig: argConfig,
@@ -245,10 +256,12 @@ function _runCLIHelper<
       const rawVal = rawGlobalOptionArgs[argConfig.name];
       if (argConfig.required && rawVal === undefined) {
         throw CLIError.missingRequiredOption({
+          cliName,
           optionName: argConfig.name,
         });
       }
       acc[camelCase(argConfig.name)] = _parseAndValidateValue({
+        cliName,
         inputValue: rawVal,
         defaultValue: argConfig.defaultValue,
         paramConfig: argConfig,

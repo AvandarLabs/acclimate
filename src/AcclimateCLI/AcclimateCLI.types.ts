@@ -234,7 +234,10 @@ export type CLIState<
    */
   aliases: Record<
     CLIOptionAlias,
-    Extract<keyof TGlobalOptionParams | keyof TOptionParams, CLIFullOptionName>
+    Extract<
+      keyof _DropNonStringKeys<TGlobalOptionParams & TOptionParams>,
+      CLIFullOptionName
+    >
   >;
 
   /** The description of the CLI. */
@@ -281,6 +284,9 @@ export type IAcclimateCLI<
     TGlobalOptionParams,
     TCommands
   >;
+
+  /** Get the CLI name. */
+  getName: () => string;
 
   /** Set the description of the CLI. */
   description: (

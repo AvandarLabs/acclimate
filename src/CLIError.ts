@@ -40,15 +40,17 @@ type CLIErrorInfo =
     }
   | { code: "unknown_error"; details: undefined };
 
-type CLIErrorOptions = { message: string } & CLIErrorInfo;
+type CLIErrorOptions = { cliName: string; message: string } & CLIErrorInfo;
 
 export class CLIError extends Error {
   static invalidCLIParamValue(options: {
+    cliName: string;
     paramName: string;
     paramValue: CLIParamDataType;
     message?: string;
   }): CLIError {
     return new CLIError({
+      cliName: options.cliName,
       message:
         options.message ?? `Invalid value for CLI param "${options.paramName}"`,
       code: "invalid_cli_param_value",
@@ -56,10 +58,12 @@ export class CLIError extends Error {
     });
   }
   static missingRequiredOption(options: {
+    cliName: string;
     optionName: string;
     message?: string;
   }): CLIError {
     return new CLIError({
+      cliName: options.cliName,
       message:
         options.message ?? `Required option "${options.optionName}" is missing`,
       code: "missing_required_option",
@@ -68,10 +72,12 @@ export class CLIError extends Error {
   }
 
   static missingRequiredPositionalArg(options: {
+    cliName: string;
     positionalArgName: string;
     message?: string;
   }): CLIError {
     return new CLIError({
+      cliName: options.cliName,
       message:
         options.message ??
         `Required positional argument "${options.positionalArgName}" is missing`,
@@ -81,10 +87,12 @@ export class CLIError extends Error {
   }
 
   static unknownOption(options: {
+    cliName: string;
     optionName: string;
     message?: string;
   }): CLIError {
     return new CLIError({
+      cliName: options.cliName,
       message: options.message ?? `Option "${options.optionName}" not found`,
       code: "unknown_option",
       details: { optionName: options.optionName },
@@ -92,10 +100,12 @@ export class CLIError extends Error {
   }
 
   static tooManyPositionalArgs(options: {
+    cliName: string;
     count: number;
     message?: string;
   }): CLIError {
     return new CLIError({
+      cliName: options.cliName,
       message: options.message ?? "Too many positional arguments provided.",
       code: "too_many_positional_args",
       details: { count: options.count },
@@ -103,10 +113,12 @@ export class CLIError extends Error {
   }
 
   static invalidPositionalArgConfig(options: {
+    cliName: string;
     positionalArgName: string;
     message?: string;
   }): CLIError {
     return new CLIError({
+      cliName: options.cliName,
       message:
         options.message ??
         `Positional argument configuration for "${options.positionalArgName}" is invalid`,
@@ -116,18 +128,24 @@ export class CLIError extends Error {
   }
 
   static unknownCommand(options: {
+    cliName: string;
     commandName: string;
     message?: string;
   }): CLIError {
     return new CLIError({
+      cliName: options.cliName,
       message: options.message ?? `Command "${options.commandName}" not found`,
       code: "unknown_command",
       details: { commandName: options.commandName },
     });
   }
 
-  static alreadyRun(options: { message?: string } = {}): CLIError {
+  static alreadyRun(options: {
+    cliName: string;
+    message?: string;
+  }): CLIError {
     return new CLIError({
+      cliName: options.cliName,
       message: options.message ?? "CLI has already been run",
       code: "already_run",
       details: undefined,
@@ -135,6 +153,6 @@ export class CLIError extends Error {
   }
 
   constructor(options: CLIErrorOptions) {
-    super(`❌ ${options.message}`);
+    super(`❌ Error running ${options.cliName}: ${options.message}`);
   }
 }
