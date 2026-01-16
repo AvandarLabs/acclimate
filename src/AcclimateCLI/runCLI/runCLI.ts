@@ -1,5 +1,7 @@
 import { camelCase } from "change-case";
 import { match } from "ts-pattern";
+import { Acclimate } from "@/Acclimate";
+import { generateHelpText } from "@/AcclimateCLI/generateHelpText/generateHelpText";
 import { CLIError } from "@/CLIError";
 import type {
   AnyCLI,
@@ -272,11 +274,21 @@ function _runCLIHelper<
   );
 
   // run the action
-  cli.state.action({
-    ...parsedPositionalArgs,
-    ...parsedOptionArgs,
-    ...parsedGlobalOptionArgs,
-  } as FullCLIArgValues<TPositionalParams, TOptionParams, TGlobalOptionParams>);
+  const action = cli.state.action;
+  if (action) {
+    action({
+      ...parsedPositionalArgs,
+      ...parsedOptionArgs,
+      ...parsedGlobalOptionArgs,
+    } as FullCLIArgValues<
+      TPositionalParams,
+      TOptionParams,
+      TGlobalOptionParams
+    >);
+    return;
+  }
+
+  Acclimate.log(generateHelpText(cli));
 }
 
 /**

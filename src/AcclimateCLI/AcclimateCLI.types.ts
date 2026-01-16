@@ -258,7 +258,7 @@ export type CLIState<
   globalOptionArgs: TGlobalOptionParams;
 
   /** The action to run when the CLI is executed. */
-  action: (
+  action?: (
     args: Simplify<
       FullCLIArgValues<TPositionalParams, TOptionParams, TGlobalOptionParams>
     >,

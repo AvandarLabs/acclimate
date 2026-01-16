@@ -11,5 +11,5 @@ export const defaultCLIState: Omit<
   positionalArgs: [],
   optionArgs: {},
   globalOptionArgs: {},
-  action: () => {},
+  action: undefined,
 };
