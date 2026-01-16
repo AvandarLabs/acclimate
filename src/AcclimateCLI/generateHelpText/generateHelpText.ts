@@ -1,3 +1,4 @@
+import { generateTerminalMessage } from "@/generateTerminalMessage";
 import type {
   AnyCLI,
   CLICommandName,
@@ -10,14 +11,14 @@ import type {
 } from "../AcclimateCLI.types";
 import type { EmptyObject } from "type-fest";
 
-const SECTION_TITLES = [
+const _SECTION_TITLES = [
   "Positional Arguments",
   "Options",
   "Global Options",
   "Commands",
 ] as const;
 
-type SectionTitle = (typeof SECTION_TITLES)[number];
+type SectionTitle = (typeof _SECTION_TITLES)[number];
 
 type CLIParamWithRequired = CLIParam<string> & {
   required: boolean;
@@ -205,5 +206,5 @@ export function generateHelpText<
     TCommands
   >,
 ): string {
-  return _generateHelpTextHelper(cli, { level: 1 });
+  return generateTerminalMessage(_generateHelpTextHelper(cli, { level: 1 }));
 }

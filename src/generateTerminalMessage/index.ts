@@ -1,0 +1,1 @@
+export { generateTerminalMessage } from "./generateTerminalMessage";

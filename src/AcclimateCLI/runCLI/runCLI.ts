@@ -1,8 +1,8 @@
 import { camelCase } from "change-case";
 import { match } from "ts-pattern";
-import { Acclimate } from "@/Acclimate";
 import { generateHelpText } from "@/AcclimateCLI/generateHelpText/generateHelpText";
 import { CLIError } from "@/CLIError";
+import { requestTerminalInput } from "@/requestTerminalInput";
 import type {
   AnyCLI,
   CLICommandName,
@@ -134,7 +134,30 @@ function _replaceAliases<
   );
 }
 
-function _runCLIHelper<
+type CLIParamWithRequired = CLIParam<string> & {
+  required: boolean;
+};
+
+async function askForValue(options: {
+  argConfig: CLIParamWithRequired;
+}): Promise<string | undefined> {
+  const { argConfig } = options;
+  const askIfEmpty = argConfig.askIfEmpty;
+  const description =
+    argConfig.description ? ` (${argConfig.description})` : "";
+  const baseMessage =
+    typeof askIfEmpty === "object" ?
+      askIfEmpty.message
+    : `Please enter a value for ${argConfig.name}${description}`;
+  const coloredMessage = `|bright_cyan|${baseMessage}|reset|`;
+  return requestTerminalInput({
+    message: coloredMessage,
+    params: {},
+    options: { required: argConfig.required, type: argConfig.type },
+  });
+}
+
+async function _runCLIHelper<
   TPositionalParams extends
     | Record<CLIPositionalParamName, CLIPositionalParam>
     | EmptyObject,
@@ -153,7 +176,7 @@ function _runCLIHelper<
     TGlobalOptionParams,
     TCommands
   >;
-}): void {
+}): Promise<void> {
   const { rawGlobalOptionArgs, rawOptionArgs, rawPositionalArgs, cli } = {
     ...options,
     rawGlobalOptionArgs: _replaceAliases({
@@ -206,72 +229,76 @@ function _runCLIHelper<
   }
 
   // parse positional arguments
-  const parsedPositionalArgs = cli.state.positionalArgs.reduce(
-    (acc, argConfig, idx) => {
-      const rawVal = rawPositionalArgs[idx];
-      if (argConfig.required && rawVal === undefined) {
-        throw CLIError.missingRequiredPositionalArg({
-          cliName,
-          positionalArgName: argConfig.name,
-        });
-      }
-      acc[argConfig.name] = _parseAndValidateValue({
+  const parsedPositionalArgs: Record<string, CLIParamDataType> = {};
+  for (const [idx, argConfig] of cli.state.positionalArgs.entries()) {
+    let rawVal = rawPositionalArgs[idx];
+    if (argConfig.askIfEmpty && rawVal === undefined) {
+      rawVal = await askForValue({ argConfig });
+    }
+
+    if (argConfig.required && rawVal === undefined) {
+      throw CLIError.missingRequiredPositionalArg({
         cliName,
-        inputValue: rawVal,
-        defaultValue: argConfig.defaultValue,
-        paramConfig: argConfig,
+        positionalArgName: argConfig.name,
       });
-      return acc;
-    },
-    {} as Record<string, CLIParamDataType>,
-  );
+    }
+
+    parsedPositionalArgs[argConfig.name] = _parseAndValidateValue({
+      cliName,
+      inputValue: rawVal,
+      defaultValue: argConfig.defaultValue,
+      paramConfig: argConfig,
+    });
+  }
 
   // parse the options
-  const parsedOptionArgs = Object.values(
+  const parsedOptionArgs: Record<string, CLIParamDataType> = {};
+  for (const argConfig of Object.values(
     cli.state.optionArgs as Record<CLIFullOptionName, CLIOptionParam>,
-  ).reduce(
-    (acc, argConfig) => {
-      const rawVal = rawOptionArgs[argConfig.name];
-      if (argConfig.required && rawVal === undefined) {
-        throw CLIError.missingRequiredOption({
-          cliName,
-          optionName: argConfig.name,
-        });
-      }
+  )) {
+    let rawVal = rawOptionArgs[argConfig.name];
+    if (argConfig.askIfEmpty && rawVal === undefined) {
+      rawVal = await askForValue({ argConfig });
+    }
 
-      acc[camelCase(argConfig.name)] = _parseAndValidateValue({
+    if (argConfig.required && rawVal === undefined) {
+      throw CLIError.missingRequiredOption({
         cliName,
-        inputValue: rawVal,
-        defaultValue: argConfig.defaultValue,
-        paramConfig: argConfig,
+        optionName: argConfig.name,
       });
-      return acc;
-    },
-    {} as Record<string, CLIParamDataType>,
-  );
+    }
+
+    parsedOptionArgs[camelCase(argConfig.name)] = _parseAndValidateValue({
+      cliName,
+      inputValue: rawVal,
+      defaultValue: argConfig.defaultValue,
+      paramConfig: argConfig,
+    });
+  }
 
   // parse the global options
-  const parsedGlobalOptionArgs = Object.values(
+  const parsedGlobalOptionArgs: Record<string, CLIParamDataType> = {};
+  for (const argConfig of Object.values(
     cli.state.globalOptionArgs as Record<CLIFullOptionName, CLIOptionParam>,
-  ).reduce(
-    (acc, argConfig) => {
-      const rawVal = rawGlobalOptionArgs[argConfig.name];
-      if (argConfig.required && rawVal === undefined) {
-        throw CLIError.missingRequiredOption({
-          cliName,
-          optionName: argConfig.name,
-        });
-      }
-      acc[camelCase(argConfig.name)] = _parseAndValidateValue({
+  )) {
+    let rawVal = rawGlobalOptionArgs[argConfig.name];
+    if (argConfig.askIfEmpty && rawVal === undefined) {
+      rawVal = await askForValue({ argConfig });
+    }
+
+    if (argConfig.required && rawVal === undefined) {
+      throw CLIError.missingRequiredOption({
         cliName,
-        inputValue: rawVal,
-        defaultValue: argConfig.defaultValue,
-        paramConfig: argConfig,
+        optionName: argConfig.name,
       });
-      return acc;
-    },
-    {} as Record<string, CLIParamDataType>,
-  );
+    }
+    parsedGlobalOptionArgs[camelCase(argConfig.name)] = _parseAndValidateValue({
+      cliName,
+      inputValue: rawVal,
+      defaultValue: argConfig.defaultValue,
+      paramConfig: argConfig,
+    });
+  }
 
   // run the action
   const action = cli.state.action;
@@ -288,7 +315,7 @@ function _runCLIHelper<
     return;
   }
 
-  Acclimate.log(generateHelpText(cli));
+  console.log(generateHelpText(cli));
 }
 
 /**
@@ -296,7 +323,10 @@ function _runCLIHelper<
  *
  * @param options - The options for running the CLI.
  */
-export function runCLI(options: { input: string[]; cli: AnyCLI }): void {
+export async function runCLI(options: {
+  input: string[];
+  cli: AnyCLI;
+}): Promise<void> {
   const { input, cli } = options;
   const firstOptionIdx = input.findIndex((token) => {
     return token.startsWith("-");
@@ -341,5 +371,10 @@ export function runCLI(options: { input: string[]; cli: AnyCLI }): void {
     }
   }
 
-  _runCLIHelper({ rawPositionalArgs, rawOptionArgs, rawGlobalOptionArgs, cli });
+  await _runCLIHelper({
+    rawPositionalArgs,
+    rawOptionArgs,
+    rawGlobalOptionArgs,
+    cli,
+  });
 }

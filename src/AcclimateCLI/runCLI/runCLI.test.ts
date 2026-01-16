@@ -1,12 +1,42 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { runCLI } from "@/AcclimateCLI/runCLI/runCLI";
+import { generateTerminalMessage } from "@/generateTerminalMessage/generateTerminalMessage";
 import { createCLI } from "../createCLI";
 import type { CLIParamDataType } from "@/AcclimateCLI/AcclimateCLI.types";
 
 type ActionArgs = Record<string, CLIParamDataType>;
 
+const readlineMocks = vi.hoisted(() => {
+  const question = vi.fn<() => Promise<string>>();
+  const close = vi.fn();
+  const createInterface = vi.fn(() => {
+    return {
+      question,
+      close,
+    };
+  });
+
+  return { question, close, createInterface };
+});
+
+vi.mock("node:readline/promises", () => {
+  return {
+    createInterface: readlineMocks.createInterface,
+  };
+});
+
+beforeEach(() => {
+  readlineMocks.question.mockReset();
+  readlineMocks.close.mockReset();
+  readlineMocks.createInterface.mockReset();
+  readlineMocks.createInterface.mockReturnValue({
+    question: readlineMocks.question,
+    close: readlineMocks.close,
+  });
+});
+
 describe("runCLI - positional args", () => {
-  it("parses required + optional positional args (defaultValue)", () => {
+  it("parses required + optional positional args (defaultValue)", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
 
     const cli = createCLI("positional-defaults")
@@ -23,12 +53,12 @@ describe("runCLI - positional args", () => {
       })
       .action(action);
 
-    runCLI({ cli, input: ["alpha"] });
+    await runCLI({ cli, input: ["alpha"] });
 
     expect(action).toHaveBeenCalledWith({ first: "alpha", count: 3 });
   });
 
-  it("parses optional positional arg when provided", () => {
+  it("parses optional positional arg when provided", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
 
     const cli = createCLI("positional-provided")
@@ -45,12 +75,12 @@ describe("runCLI - positional args", () => {
       })
       .action(action);
 
-    runCLI({ cli, input: ["alpha", "5"] });
+    await runCLI({ cli, input: ["alpha", "5"] });
 
     expect(action).toHaveBeenCalledWith({ first: "alpha", count: 5 });
   });
 
-  it("throws when required positional arg is missing", () => {
+  it("throws when required positional arg is missing", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
 
     const cli = createCLI("positional-required-missing")
@@ -61,14 +91,12 @@ describe("runCLI - positional args", () => {
       })
       .action(action);
 
-    expect(() => {
-      runCLI({ cli, input: [] });
-    }).toThrow();
+    await expect(runCLI({ cli, input: [] })).rejects.toThrow();
 
     expect(action).not.toHaveBeenCalled();
   });
 
-  it("supports boolean positional args with a custom parser", () => {
+  it("supports boolean positional args with a custom parser", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
 
     const cli = createCLI("positional-boolean-parser")
@@ -82,14 +110,117 @@ describe("runCLI - positional args", () => {
       })
       .action(action);
 
-    runCLI({ cli, input: ["false"] });
+    await runCLI({ cli, input: ["false"] });
 
     expect(action).toHaveBeenCalledWith({ isEnabled: false });
+  });
+
+  it("prompts for an optional positional arg when askIfEmpty is true", async () => {
+    const action = vi.fn<(args: ActionArgs) => void>();
+
+    const cli = createCLI("positional-ask-if-empty")
+      .addPositionalArg({
+        name: "tag",
+        description: "Short tag value",
+        type: "string",
+        required: false,
+        askIfEmpty: true,
+      })
+      .action(action);
+
+    readlineMocks.question.mockResolvedValueOnce("alpha");
+
+    await runCLI({ cli, input: [] });
+
+    expect(readlineMocks.question).toHaveBeenCalledWith(
+      generateTerminalMessage(
+        "|bright_cyan|Please enter a value for tag (Short tag value)|reset| |gray|(press Enter to leave empty)|reset|: ",
+      ),
+    );
+    expect(action).toHaveBeenCalledWith({ tag: "alpha" });
+    expect(readlineMocks.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the custom askIfEmpty message when provided", async () => {
+    const action = vi.fn<(args: ActionArgs) => void>();
+
+    const cli = createCLI("positional-ask-if-empty-message")
+      .addPositionalArg({
+        name: "tag",
+        type: "string",
+        required: false,
+        askIfEmpty: {
+          message: "Tag to use?",
+        },
+      })
+      .action(action);
+
+    readlineMocks.question.mockResolvedValueOnce("beta");
+
+    await runCLI({ cli, input: [] });
+
+    expect(readlineMocks.question).toHaveBeenCalledWith(
+      generateTerminalMessage(
+        "|bright_cyan|Tag to use?|reset| |gray|(press Enter to leave empty)|reset| ",
+      ),
+    );
+    expect(action).toHaveBeenCalledWith({ tag: "beta" });
+  });
+
+  it("returns undefined when optional askIfEmpty is left blank", async () => {
+    const action = vi.fn<(args: ActionArgs) => void>();
+
+    const cli = createCLI("positional-ask-if-empty-optional")
+      .addPositionalArg({
+        name: "note",
+        type: "string",
+        required: false,
+        askIfEmpty: true,
+      })
+      .action(action);
+
+    readlineMocks.question.mockResolvedValueOnce("");
+
+    await runCLI({ cli, input: [] });
+
+    expect(action).toHaveBeenCalledWith({ note: undefined });
+  });
+
+  it("re-prompts until a required askIfEmpty positional arg is provided", async () => {
+    const action = vi.fn<(args: ActionArgs) => void>();
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => {
+      return true;
+    });
+
+    const cli = createCLI("positional-ask-if-empty-required")
+      .addPositionalArg({
+        name: "target",
+        type: "string",
+        required: true,
+        askIfEmpty: true,
+      })
+      .action(action);
+
+    readlineMocks.question
+      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce("service");
+
+    await runCLI({ cli, input: [] });
+
+    expect(readlineMocks.question).toHaveBeenCalledTimes(2);
+    expect(stdoutSpy).toHaveBeenCalledWith(
+      generateTerminalMessage(
+        "|red|This value is required.|reset| Please enter a value.\n",
+      ),
+    );
+    expect(action).toHaveBeenCalledWith({ target: "service" });
+
+    stdoutSpy.mockRestore();
   });
 });
 
 describe("runCLI - options", () => {
-  it("parses required + optional options (mix -- and -)", () => {
+  it("parses required + optional options (mix -- and -)", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
 
     const cli = createCLI("options-required-optional")
@@ -108,7 +239,7 @@ describe("runCLI - options", () => {
       })
       .action(action);
 
-    runCLI({
+    await runCLI({
       cli,
       input: ["-n", "hello world", "--tags", "one", "two", "three"],
     });
@@ -119,7 +250,7 @@ describe("runCLI - options", () => {
     });
   });
 
-  it("uses defaultValue for an optional option when omitted", () => {
+  it("uses defaultValue for an optional option when omitted", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
 
     const cli = createCLI("options-default")
@@ -132,12 +263,12 @@ describe("runCLI - options", () => {
       })
       .action(action);
 
-    runCLI({ cli, input: [] });
+    await runCLI({ cli, input: [] });
 
     expect(action).toHaveBeenCalledWith({ mode: "safe" });
   });
 
-  it("throws when a required option is missing", () => {
+  it("throws when a required option is missing", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
 
     const cli = createCLI("options-required-missing")
@@ -149,14 +280,12 @@ describe("runCLI - options", () => {
       })
       .action(action);
 
-    expect(() => {
-      runCLI({ cli, input: [] });
-    }).toThrow();
+    await expect(runCLI({ cli, input: [] })).rejects.toThrow();
 
     expect(action).not.toHaveBeenCalled();
   });
 
-  it("does not apply defaultValue when the option is required", () => {
+  it("does not apply defaultValue when the option is required", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
 
     const cli = createCLI("options-required-default-ignored")
@@ -169,14 +298,12 @@ describe("runCLI - options", () => {
       })
       .action(action);
 
-    expect(() => {
-      runCLI({ cli, input: [] });
-    }).toThrow();
+    await expect(runCLI({ cli, input: [] })).rejects.toThrow();
 
     expect(action).not.toHaveBeenCalled();
   });
 
-  it("supports boolean options as flags", () => {
+  it("supports boolean options as flags", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
 
     const cli = createCLI("options-boolean-flag")
@@ -189,12 +316,12 @@ describe("runCLI - options", () => {
       })
       .action(action);
 
-    runCLI({ cli, input: ["--force"] });
+    await runCLI({ cli, input: ["--force"] });
 
     expect(action).toHaveBeenCalledWith({ force: true });
   });
 
-  it("uses custom parser for an option", () => {
+  it("uses custom parser for an option", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
 
     const cli = createCLI("options-custom-parser")
@@ -209,12 +336,12 @@ describe("runCLI - options", () => {
       })
       .action(action);
 
-    runCLI({ cli, input: ["-p", "3000"] });
+    await runCLI({ cli, input: ["-p", "3000"] });
 
     expect(action).toHaveBeenCalledWith({ port: 3001 });
   });
 
-  it("throws when validator fails", () => {
+  it("throws when validator fails", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
 
     const cli = createCLI("options-validator-fails")
@@ -229,16 +356,72 @@ describe("runCLI - options", () => {
       })
       .action(action);
 
-    expect(() => {
-      runCLI({ cli, input: ["--age", "-1"] });
-    }).toThrow();
+    await expect(runCLI({ cli, input: ["--age", "-1"] })).rejects.toThrow();
 
     expect(action).not.toHaveBeenCalled();
+  });
+
+  it("prompts for an option when askIfEmpty is true", async () => {
+    const action = vi.fn<(args: ActionArgs) => void>();
+
+    const cli = createCLI("options-ask-if-empty")
+      .addOption({
+        name: "--note",
+        aliases: ["-n"],
+        type: "string",
+        required: false,
+        askIfEmpty: true,
+      })
+      .action(action);
+
+    readlineMocks.question.mockResolvedValueOnce("hello");
+
+    await runCLI({ cli, input: [] });
+
+    expect(readlineMocks.question).toHaveBeenCalledWith(
+      generateTerminalMessage(
+        "|bright_cyan|Please enter a value for --note|reset| |gray|(press Enter to leave empty)|reset|: ",
+      ),
+    );
+    expect(action).toHaveBeenCalledWith({ note: "hello" });
+  });
+
+  it("re-prompts for required option until a value is provided", async () => {
+    const action = vi.fn<(args: ActionArgs) => void>();
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => {
+      return true;
+    });
+
+    const cli = createCLI("options-ask-if-empty-required")
+      .addOption({
+        name: "--mode",
+        aliases: ["-m"],
+        type: "string",
+        required: true,
+        askIfEmpty: true,
+      })
+      .action(action);
+
+    readlineMocks.question
+      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce("safe");
+
+    await runCLI({ cli, input: [] });
+
+    expect(readlineMocks.question).toHaveBeenCalledTimes(2);
+    expect(stdoutSpy).toHaveBeenCalledWith(
+      generateTerminalMessage(
+        "|red|This value is required.|reset| Please enter a value.\n",
+      ),
+    );
+    expect(action).toHaveBeenCalledWith({ mode: "safe" });
+
+    stdoutSpy.mockRestore();
   });
 });
 
 describe("runCLI - global options", () => {
-  it("parses required + optional global options", () => {
+  it("parses required + optional global options", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
 
     const cli = createCLI("global-options")
@@ -257,17 +440,42 @@ describe("runCLI - global options", () => {
       })
       .action(action);
 
-    runCLI({ cli, input: ["-e", "prod", "--trace"] });
+    await runCLI({ cli, input: ["-e", "prod", "--trace"] });
 
     expect(action).toHaveBeenCalledWith({
       env: "prod",
       trace: true,
     });
   });
+
+  it("prompts for a global option when askIfEmpty is true", async () => {
+    const action = vi.fn<(args: ActionArgs) => void>();
+
+    const cli = createCLI("global-options-ask-if-empty")
+      .addGlobalOption({
+        name: "--token",
+        aliases: ["-t"],
+        type: "string",
+        required: false,
+        askIfEmpty: true,
+      })
+      .action(action);
+
+    readlineMocks.question.mockResolvedValueOnce("abc123");
+
+    await runCLI({ cli, input: [] });
+
+    expect(readlineMocks.question).toHaveBeenCalledWith(
+      generateTerminalMessage(
+        "|bright_cyan|Please enter a value for --token|reset| |gray|(press Enter to leave empty)|reset|: ",
+      ),
+    );
+    expect(action).toHaveBeenCalledWith({ token: "abc123" });
+  });
 });
 
 describe("runCLI - commands", () => {
-  it("runs a command with no arguments", () => {
+  it("runs a command with no arguments", async () => {
     const rootAction = vi.fn<(args: ActionArgs) => void>();
     const devCommandAction = vi.fn<(args: ActionArgs) => void>();
 
@@ -275,12 +483,12 @@ describe("runCLI - commands", () => {
       .addCommand("dev", createCLI("dev").action(devCommandAction))
       .action(rootAction);
 
-    runCLI({ cli, input: ["dev"] });
+    await runCLI({ cli, input: ["dev"] });
 
     expect(devCommandAction).toHaveBeenCalled();
   });
 
-  it("runs a command action instead of the root action", () => {
+  it("runs a command action instead of the root action", async () => {
     const rootAction = vi.fn<(args: ActionArgs) => void>();
     const commandAction = vi.fn<(args: ActionArgs) => void>();
 
@@ -290,25 +498,23 @@ describe("runCLI - commands", () => {
       .addCommand("init", initCLI)
       .action(rootAction);
 
-    runCLI({ cli, input: ["init"] });
+    await runCLI({ cli, input: ["init"] });
 
     expect(commandAction).toHaveBeenCalled();
     expect(rootAction).not.toHaveBeenCalled();
   });
 
-  it("throws on unknown command", () => {
+  it("throws on unknown command", async () => {
     const rootAction = vi.fn<(args: ActionArgs) => void>();
 
     const cli = createCLI("root").action(rootAction);
 
-    expect(() => {
-      runCLI({ cli, input: ["missingCommand"] });
-    }).toThrow();
+    await expect(runCLI({ cli, input: ["missingCommand"] })).rejects.toThrow();
 
     expect(rootAction).not.toHaveBeenCalled();
   });
 
-  it("parses command positional args (required + optional defaultValue)", () => {
+  it("parses command positional args (required + optional defaultValue)", async () => {
     const deployAction = vi.fn<(args: ActionArgs) => void>();
 
     const deployCLI = createCLI("deploy")
@@ -327,7 +533,7 @@ describe("runCLI - commands", () => {
 
     const cli = createCLI("root").addCommand("deploy", deployCLI);
 
-    runCLI({ cli, input: ["deploy", "api"] });
+    await runCLI({ cli, input: ["deploy", "api"] });
 
     expect(deployAction).toHaveBeenCalledWith({
       service: "api",
@@ -335,7 +541,7 @@ describe("runCLI - commands", () => {
     });
   });
 
-  it("parses command options (required + optional) with mixed values and aliases", () => {
+  it("parses command options (required + optional) with mixed values and aliases", async () => {
     const deployAction = vi.fn<(args: ActionArgs) => void>();
 
     const deployCLI = createCLI("deploy")
@@ -368,7 +574,7 @@ describe("runCLI - commands", () => {
 
     const cli = createCLI("root").addCommand("deploy", deployCLI);
 
-    runCLI({
+    await runCLI({
       cli,
       input: [
         "deploy",
@@ -389,7 +595,7 @@ describe("runCLI - commands", () => {
     });
   });
 
-  it("parses global options for commands (required + optional)", () => {
+  it("parses global options for commands (required + optional)", async () => {
     const rootAction = vi.fn<(args: ActionArgs) => void>();
     const deployAction = vi.fn<(args: ActionArgs) => void>();
 
@@ -418,7 +624,7 @@ describe("runCLI - commands", () => {
       .addCommand("deploy", deployCLI)
       .action(rootAction);
 
-    runCLI({
+    await runCLI({
       cli,
       input: ["deploy", "api", "--verbose", "-t", "abc 123"],
     });
@@ -432,7 +638,7 @@ describe("runCLI - commands", () => {
     expect(rootAction).not.toHaveBeenCalled();
   });
 
-  it("parses required positional and optional options in deeply nested sub-commands", () => {
+  it("parses required positional and optional options in deeply nested sub-commands", async () => {
     const newModelAction = vi.fn<(args: ActionArgs) => void>();
 
     const newModelCLI = createCLI("new")
@@ -455,7 +661,7 @@ describe("runCLI - commands", () => {
     const devCLI = createCLI("dev").addCommand("models", modelsCLI);
     const rootCLI = createCLI("root").addCommand("dev", devCLI);
 
-    runCLI({
+    await runCLI({
       cli: rootCLI,
       input: ["dev", "models", "new", "Dashboard"],
     });

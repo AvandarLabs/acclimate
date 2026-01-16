@@ -1,49 +1,8 @@
 import { createCLI } from "./AcclimateCLI";
 import { runCLI } from "./AcclimateCLI/runCLI/runCLI";
+import { generateTerminalMessage } from "./generateTerminalMessage";
+import { requestTerminalInput } from "./requestTerminalInput";
 import type { AnyCLI, IAcclimateCLI } from "./AcclimateCLI/AcclimateCLI.types";
-
-const COLOR_CODES: Record<string, string> = {
-  reset: "\x1b[0m",
-  black: "\x1b[30m",
-  red: "\x1b[31m",
-  green: "\x1b[32m",
-  yellow: "\x1b[33m",
-  blue: "\x1b[34m",
-  magenta: "\x1b[35m",
-  cyan: "\x1b[36m",
-  white: "\x1b[37m",
-  bright_black: "\x1b[90m",
-  gray: "\x1b[90m",
-  grey: "\x1b[90m",
-  bright_red: "\x1b[91m",
-  bright_green: "\x1b[92m",
-  bright_yellow: "\x1b[93m",
-  bright_blue: "\x1b[94m",
-  bright_magenta: "\x1b[95m",
-  bright_cyan: "\x1b[96m",
-  bright_white: "\x1b[97m",
-};
-
-const PARAM_TOKEN_REGEX = /\$([a-zA-Z0-9_]+)\$/g;
-const COLOR_TOKEN_REGEX = /\|([a-zA-Z_]+)\|/g;
-
-/**
- * Replaces `$token$` placeholders with values from `params`.
- * If a token does not exist in `params`, the placeholder is left unchanged.
- */
-function interpolateParams(message: string, params: Record<string, string>) {
-  return message.replace(PARAM_TOKEN_REGEX, (match, key: string) => {
-    const value = params[key];
-    return value ?? match;
-  });
-}
-
-function applyColors(message: string) {
-  return message.replace(COLOR_TOKEN_REGEX, (match, colorName: string) => {
-    const code = COLOR_CODES[colorName.toLowerCase()];
-    return code ?? match;
-  });
-}
 
 type Acclimate = {
   /**
@@ -100,21 +59,30 @@ type Acclimate = {
    * // ^ the "Error:" portion will be red
    *
    */
-  log: (message: string, params?: Record<string, string>) => void;
+  log: (message: string, params?: Record<string, string | undefined>) => void;
+
+  /**
+   * Prompt the user for interactive input in the terminal.
+   *
+   * @param options - Prompt configuration.
+   * @returns The user's response, or undefined when left empty and optional.
+   */
+  requestInput: (options: {
+    message: string;
+    params: Record<string, string>;
+    options: { required: boolean; type?: "string" | "number" | "boolean" };
+  }) => Promise<string | undefined>;
 };
 
 export const Acclimate: Acclimate = {
   createCLI,
   run: (cli: AnyCLI) => {
-    runCLI({ cli, input: process.argv.slice(2) });
+    void runCLI({ cli, input: process.argv.slice(2) });
   },
-  log: (message: string, params: Record<string, string> = {}) => {
-    const hasColorToken = Boolean(message.match(COLOR_TOKEN_REGEX));
-    const endsWithReset = message.trimEnd().endsWith("|reset|");
-    const withReset =
-      hasColorToken && !endsWithReset ? `${message}|reset|` : message;
-    const interpolated = interpolateParams(withReset, params);
-    const colorized = applyColors(interpolated);
-    console.log(colorized);
+  log: (message: string, params: Record<string, string | undefined> = {}) => {
+    console.log(generateTerminalMessage(message, params));
+  },
+  requestInput: (options) => {
+    return requestTerminalInput(options);
   },
 };

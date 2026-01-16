@@ -1,26 +1,29 @@
 import { describe, expect, it } from "vitest";
 import { createCLI } from "../createCLI";
 import { generateHelpText } from "./generateHelpText";
+import { generateTerminalMessage } from "@/generateTerminalMessage/generateTerminalMessage";
 
 describe("generateHelpText", () => {
   it("formats the name, description, and empty sections", () => {
     const cli = createCLI("acclimate").description("A friendly CLI");
 
     expect(generateHelpText(cli)).toBe(
-      "|bright_cyan|acclimate|reset|\n" +
-        "  |gray|A friendly CLI|reset|\n" +
-        "\n" +
-        "|bright_yellow|Positional Arguments|reset|\n" +
-        "  |gray|None|reset|\n" +
-        "\n" +
-        "|bright_yellow|Options|reset|\n" +
-        "  |gray|None|reset|\n" +
-        "\n" +
-        "|bright_yellow|Global Options|reset|\n" +
-        "  |gray|None|reset|\n" +
-        "\n" +
-        "|bright_yellow|Commands|reset|\n" +
-        "  |gray|None|reset|",
+      generateTerminalMessage(
+        "|bright_cyan|acclimate|reset|\n" +
+          "  |gray|A friendly CLI|reset|\n" +
+          "\n" +
+          "|bright_yellow|Positional Arguments|reset|\n" +
+          "  |gray|None|reset|\n" +
+          "\n" +
+          "|bright_yellow|Options|reset|\n" +
+          "  |gray|None|reset|\n" +
+          "\n" +
+          "|bright_yellow|Global Options|reset|\n" +
+          "  |gray|None|reset|\n" +
+          "\n" +
+          "|bright_yellow|Commands|reset|\n" +
+          "  |gray|None|reset|",
+      ),
     );
   });
 
@@ -64,22 +67,24 @@ describe("generateHelpText", () => {
       });
 
     expect(generateHelpText(cli)).toBe(
-      "|bright_cyan|acclimate|reset|\n" +
-        "  |gray|A friendly CLI|reset|\n" +
-        "\n" +
-        "|bright_yellow|Positional Arguments|reset|\n" +
-        "  |bright_white|target|reset| (string)|reset| |red|required|reset| - |gray|Target to run|reset|\n" +
-        "  |bright_white|count|reset| (number)|reset| |gray|optional|reset| - |gray|Run count|reset| |gray|[default: 2]|reset|\n" +
-        "\n" +
-        "|bright_yellow|Options|reset|\n" +
-        "  |bright_white|--verbose, -v|reset| (boolean)|reset| |gray|optional|reset| - |gray|Verbose output|reset|\n" +
-        "  |bright_white|--mode, -m|reset| (string)|reset| |red|required|reset| - |gray|Mode|reset|\n" +
-        "\n" +
-        "|bright_yellow|Global Options|reset|\n" +
-        "  |bright_white|--env, -e|reset| (string)|reset| |gray|optional|reset| - |gray|Environment|reset| |gray|[default: \"dev\"]|reset|\n" +
-        "\n" +
-        "|bright_yellow|Commands|reset|\n" +
-        "  |gray|None|reset|",
+      generateTerminalMessage(
+        "|bright_cyan|acclimate|reset|\n" +
+          "  |gray|A friendly CLI|reset|\n" +
+          "\n" +
+          "|bright_yellow|Positional Arguments|reset|\n" +
+          "  |bright_white|target|reset| (string)|reset| |red|required|reset| - |gray|Target to run|reset|\n" +
+          "  |bright_white|count|reset| (number)|reset| |gray|optional|reset| - |gray|Run count|reset| |gray|[default: 2]|reset|\n" +
+          "\n" +
+          "|bright_yellow|Options|reset|\n" +
+          "  |bright_white|--verbose, -v|reset| (boolean)|reset| |gray|optional|reset| - |gray|Verbose output|reset|\n" +
+          "  |bright_white|--mode, -m|reset| (string)|reset| |red|required|reset| - |gray|Mode|reset|\n" +
+          "\n" +
+          "|bright_yellow|Global Options|reset|\n" +
+          "  |bright_white|--env, -e|reset| (string)|reset| |gray|optional|reset| - |gray|Environment|reset| |gray|[default: \"dev\"]|reset|\n" +
+          "\n" +
+          "|bright_yellow|Commands|reset|\n" +
+          "  |gray|None|reset|",
+      ),
     );
   });
 
@@ -93,51 +98,53 @@ describe("generateHelpText", () => {
       .addCommand("alpha", alpha);
 
     expect(generateHelpText(cli)).toBe(
-      "|bright_cyan|root|reset|\n" +
-        "  |gray|Root CLI|reset|\n" +
-        "\n" +
-        "|bright_yellow|Positional Arguments|reset|\n" +
-        "  |gray|None|reset|\n" +
-        "\n" +
-        "|bright_yellow|Options|reset|\n" +
-        "  |gray|None|reset|\n" +
-        "\n" +
-        "|bright_yellow|Global Options|reset|\n" +
-        "  |gray|None|reset|\n" +
-        "\n" +
-        "|bright_yellow|Commands|reset|\n" +
-        "  |bright_white|alpha|reset| - |gray|Alpha command|reset|\n" +
-        "  |bright_white|beta|reset| - |gray|Beta command|reset|\n" +
-        "\n" +
-        "    |bright_cyan|alpha|reset|\n" +
-        "      |gray|Alpha command|reset|\n" +
-        "\n" +
-        "    |bright_yellow|Positional Arguments|reset|\n" +
-        "      |gray|None|reset|\n" +
-        "\n" +
-        "    |bright_yellow|Options|reset|\n" +
-        "      |gray|None|reset|\n" +
-        "\n" +
-        "    |bright_yellow|Global Options|reset|\n" +
-        "      |gray|None|reset|\n" +
-        "\n" +
-        "    |bright_yellow|Commands|reset|\n" +
-        "      |bright_yellow|Available Commands:|reset| |gray|None|reset|\n" +
-        "\n" +
-        "    |bright_cyan|beta|reset|\n" +
-        "      |gray|Beta command|reset|\n" +
-        "\n" +
-        "    |bright_yellow|Positional Arguments|reset|\n" +
-        "      |gray|None|reset|\n" +
-        "\n" +
-        "    |bright_yellow|Options|reset|\n" +
-        "      |gray|None|reset|\n" +
-        "\n" +
-        "    |bright_yellow|Global Options|reset|\n" +
-        "      |gray|None|reset|\n" +
-        "\n" +
-        "    |bright_yellow|Commands|reset|\n" +
-        "      |bright_yellow|Available Commands:|reset| |gray|None|reset|",
+      generateTerminalMessage(
+        "|bright_cyan|root|reset|\n" +
+          "  |gray|Root CLI|reset|\n" +
+          "\n" +
+          "|bright_yellow|Positional Arguments|reset|\n" +
+          "  |gray|None|reset|\n" +
+          "\n" +
+          "|bright_yellow|Options|reset|\n" +
+          "  |gray|None|reset|\n" +
+          "\n" +
+          "|bright_yellow|Global Options|reset|\n" +
+          "  |gray|None|reset|\n" +
+          "\n" +
+          "|bright_yellow|Commands|reset|\n" +
+          "  |bright_white|alpha|reset| - |gray|Alpha command|reset|\n" +
+          "  |bright_white|beta|reset| - |gray|Beta command|reset|\n" +
+          "\n" +
+          "    |bright_cyan|alpha|reset|\n" +
+          "      |gray|Alpha command|reset|\n" +
+          "\n" +
+          "    |bright_yellow|Positional Arguments|reset|\n" +
+          "      |gray|None|reset|\n" +
+          "\n" +
+          "    |bright_yellow|Options|reset|\n" +
+          "      |gray|None|reset|\n" +
+          "\n" +
+          "    |bright_yellow|Global Options|reset|\n" +
+          "      |gray|None|reset|\n" +
+          "\n" +
+          "    |bright_yellow|Commands|reset|\n" +
+          "      |bright_yellow|Available Commands:|reset| |gray|None|reset|\n" +
+          "\n" +
+          "    |bright_cyan|beta|reset|\n" +
+          "      |gray|Beta command|reset|\n" +
+          "\n" +
+          "    |bright_yellow|Positional Arguments|reset|\n" +
+          "      |gray|None|reset|\n" +
+          "\n" +
+          "    |bright_yellow|Options|reset|\n" +
+          "      |gray|None|reset|\n" +
+          "\n" +
+          "    |bright_yellow|Global Options|reset|\n" +
+          "      |gray|None|reset|\n" +
+          "\n" +
+          "    |bright_yellow|Commands|reset|\n" +
+          "      |bright_yellow|Available Commands:|reset| |gray|None|reset|",
+      ),
     );
   });
 
@@ -154,9 +161,15 @@ describe("generateHelpText", () => {
     const helpText = generateHelpText(cli);
 
     expect(helpText).toContain(
-      "|bright_yellow|Available Commands:|reset| |gray|db, web|reset|",
+      generateTerminalMessage(
+        "|bright_yellow|Available Commands:|reset| |gray|db, web|reset|",
+      ),
     );
-    expect(helpText).not.toContain("|bright_cyan|db|reset|");
-    expect(helpText).not.toContain("|bright_cyan|web|reset|");
+    expect(helpText).not.toContain(
+      generateTerminalMessage("|bright_cyan|db|reset|"),
+    );
+    expect(helpText).not.toContain(
+      generateTerminalMessage("|bright_cyan|web|reset|"),
+    );
   });
 });
