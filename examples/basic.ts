@@ -19,6 +19,7 @@ const DevCLI = Acclimate.createCLI("dev")
     type: "number",
     required: false,
     defaultValue: 1,
+    askIfEmpty: true,
     description: "Number of cycles",
   })
   .addOption({
@@ -84,7 +85,17 @@ const DevCLI = Acclimate.createCLI("dev")
   .addCommand("db", DevDBCLI)
   .addCommand("web", DevWebCLI)
   .action(
-    ({ target, count, mode, verbose, dryRun, env, region, profile, confirm }) => {
+    ({
+      target,
+      count,
+      mode,
+      verbose,
+      dryRun,
+      env,
+      region,
+      profile,
+      confirm,
+    }) => {
       const cycles = Math.max(1, count ?? 1);
 
       Acclimate.log("|cyan|Running program...|reset|");
@@ -97,7 +108,7 @@ const DevCLI = Acclimate.createCLI("dev")
           region,
           profile,
           confirm: confirm === undefined ? "unset" : String(confirm),
-        }
+        },
       );
       Acclimate.log("|gray|Cycles: $count$|reset|", { count: String(cycles) });
 
@@ -115,7 +126,7 @@ const DevCLI = Acclimate.createCLI("dev")
       }
 
       Acclimate.log("|green|Done.|reset|");
-    }
+    },
   );
 
 const cli = Acclimate.createCLI("demo-cli")

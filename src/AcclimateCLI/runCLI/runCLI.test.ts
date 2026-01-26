@@ -134,7 +134,7 @@ describe("runCLI - positional args", () => {
 
     expect(readlineMocks.question).toHaveBeenCalledWith(
       generateTerminalMessage(
-        "|bright_cyan|Please enter a value for tag (Short tag value)|reset| |gray|(press Enter to leave empty)|reset|: ",
+        "|bright_cyan|Please enter a value for tag (Short tag value)|reset| |gray|(press Enter to leave empty)|reset| ",
       ),
     );
     expect(action).toHaveBeenCalledWith({ tag: "alpha" });
@@ -188,9 +188,11 @@ describe("runCLI - positional args", () => {
 
   it("re-prompts until a required askIfEmpty positional arg is provided", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
-    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => {
-      return true;
-    });
+    const stdoutSpy = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => {
+        return true;
+      });
 
     const cli = createCLI("positional-ask-if-empty-required")
       .addPositionalArg({
@@ -380,17 +382,45 @@ describe("runCLI - options", () => {
 
     expect(readlineMocks.question).toHaveBeenCalledWith(
       generateTerminalMessage(
-        "|bright_cyan|Please enter a value for --note|reset| |gray|(press Enter to leave empty)|reset|: ",
+        "|bright_cyan|Please enter a value for --note|reset| |gray|(press Enter to leave empty)|reset| ",
       ),
     );
     expect(action).toHaveBeenCalledWith({ note: "hello" });
   });
 
+  it("uses defaultValue when optional askIfEmpty option is left blank", async () => {
+    const action = vi.fn<(args: ActionArgs) => void>();
+
+    const cli = createCLI("options-ask-if-empty-default")
+      .addOption({
+        name: "--mode",
+        aliases: ["-m"],
+        type: "string",
+        required: false,
+        askIfEmpty: true,
+        defaultValue: "safe",
+      })
+      .action(action);
+
+    readlineMocks.question.mockResolvedValueOnce("");
+
+    await runCLI({ cli, input: [] });
+
+    expect(readlineMocks.question).toHaveBeenCalledWith(
+      generateTerminalMessage(
+        "|bright_cyan|Please enter a value for --mode|reset| [default: safe] |gray|(press Enter to use default)|reset| ",
+      ),
+    );
+    expect(action).toHaveBeenCalledWith({ mode: "safe" });
+  });
+
   it("re-prompts for required option until a value is provided", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
-    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => {
-      return true;
-    });
+    const stdoutSpy = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => {
+        return true;
+      });
 
     const cli = createCLI("options-ask-if-empty-required")
       .addOption({
@@ -417,6 +447,32 @@ describe("runCLI - options", () => {
     expect(action).toHaveBeenCalledWith({ mode: "safe" });
 
     stdoutSpy.mockRestore();
+  });
+
+  it("uses defaultValue when required askIfEmpty option is left blank", async () => {
+    const action = vi.fn<(args: ActionArgs) => void>();
+
+    const cli = createCLI("options-ask-if-empty-required-default")
+      .addOption({
+        name: "--mode",
+        aliases: ["-m"],
+        type: "string",
+        required: true,
+        askIfEmpty: true,
+        defaultValue: "safe",
+      })
+      .action(action);
+
+    readlineMocks.question.mockResolvedValueOnce("");
+
+    await runCLI({ cli, input: [] });
+
+    expect(readlineMocks.question).toHaveBeenCalledWith(
+      generateTerminalMessage(
+        "|bright_cyan|Please enter a value for --mode|reset| [default: safe] |gray|(press Enter to use default)|reset| ",
+      ),
+    );
+    expect(action).toHaveBeenCalledWith({ mode: "safe" });
   });
 });
 
@@ -467,7 +523,7 @@ describe("runCLI - global options", () => {
 
     expect(readlineMocks.question).toHaveBeenCalledWith(
       generateTerminalMessage(
-        "|bright_cyan|Please enter a value for --token|reset| |gray|(press Enter to leave empty)|reset|: ",
+        "|bright_cyan|Please enter a value for --token|reset| |gray|(press Enter to leave empty)|reset| ",
       ),
     );
     expect(action).toHaveBeenCalledWith({ token: "abc123" });

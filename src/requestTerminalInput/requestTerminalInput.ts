@@ -4,34 +4,34 @@ import { generateTerminalMessage } from "@/generateTerminalMessage";
 
 const COLOR_TOKEN_REGEX = /\|[a-zA-Z_]+\|/g;
 
-type RequestTerminalInputOptions = {
-  message: string;
-  params: Record<string, string>;
-  options: {
-    required: boolean;
-    type?: "string" | "number" | "boolean";
-  };
-};
-
-function messageHasPunctuation(message: string): boolean {
-  const stripped = message.replace(COLOR_TOKEN_REGEX, "").trimEnd();
-  return stripped.endsWith(":") || stripped.endsWith("?");
-}
-
 /**
  * Prompt the user for terminal input, optionally enforcing a non-empty value.
  */
-export async function requestTerminalInput(
-  options: RequestTerminalInputOptions,
-): Promise<string | undefined> {
-  const { message, params, options: promptOptions } = options;
+export async function requestTerminalInput(options: {
+  message: string;
+  params: Record<string, string>;
+  promptOptions: {
+    required: boolean;
+    type?: "string" | "number" | "boolean";
+
+    /** The default value to use if the user provides an empty response */
+    defaultValue?: string | number | boolean;
+  };
+}): Promise<string | undefined> {
+  const {
+    message,
+    params,
+    promptOptions: { required, type, defaultValue },
+  } = options;
   const notice =
-    promptOptions.required ? "" : " |gray|(press Enter to leave empty)|reset|";
-  const booleanNotice = promptOptions.type === "boolean" ? " |reset|(y/n)" : "";
-  const promptMessage = `${message}${booleanNotice}${notice}`;
-  const promptText =
-    messageHasPunctuation(message) ? `${promptMessage} ` : `${promptMessage}: `;
-  const prompt = generateTerminalMessage(promptText, params);
+    defaultValue !== undefined ? " |gray|(press Enter to use default)|reset|"
+    : required ? ""
+    : " |gray|(press Enter to leave empty)|reset|";
+  const defaultNotice =
+    defaultValue !== undefined ? ` [default: ${defaultValue}]` : "";
+  const booleanNotice = type === "boolean" ? " |reset|(y/n)" : "";
+  const promptMessage = `${message}${defaultNotice}${booleanNotice}${notice} `;
+  const prompt = generateTerminalMessage(promptMessage, params);
 
   const rl = createInterface({ input: stdin, output: stdout });
   try {
@@ -39,7 +39,17 @@ export async function requestTerminalInput(
       const answer = await rl.question(prompt);
       const trimmed = answer.trim();
       if (trimmed.length === 0) {
-        if (promptOptions.required) {
+        if (defaultValue !== undefined) {
+          // use the default value, parsed to a string
+          return (
+            typeof defaultValue === "string" ? defaultValue
+            : typeof defaultValue === "number" ? String(defaultValue)
+            : defaultValue ? "true"
+            : "false"
+          );
+        }
+
+        if (required) {
           stdout.write(
             generateTerminalMessage(
               "|red|This value is required.|reset| Please enter a value.\n",
@@ -49,7 +59,7 @@ export async function requestTerminalInput(
         }
         return undefined;
       }
-      if (promptOptions.type === "boolean") {
+      if (type === "boolean") {
         const normalized = trimmed.toLowerCase();
         if (normalized === "y" || normalized === "yes") {
           return "true";

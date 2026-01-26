@@ -41,12 +41,12 @@ describe("requestTerminalInput", () => {
     const result = await requestTerminalInput({
       message: "|bright_cyan|Target for $env$|reset|",
       params: { env: "dev" },
-      options: { required: false },
+      promptOptions: { required: false },
     });
 
     expect(readlineMocks.question).toHaveBeenCalledWith(
       generateTerminalMessage(
-        "|bright_cyan|Target for $env$|reset| |gray|(press Enter to leave empty)|reset|: ",
+        "|bright_cyan|Target for $env$|reset| |gray|(press Enter to leave empty)|reset| ",
         { env: "dev" },
       ),
     );
@@ -59,7 +59,7 @@ describe("requestTerminalInput", () => {
     const result = await requestTerminalInput({
       message: "Provide a note",
       params: {},
-      options: { required: false },
+      promptOptions: { required: false },
     });
 
     expect(result).toBeUndefined();
@@ -71,12 +71,12 @@ describe("requestTerminalInput", () => {
     await requestTerminalInput({
       message: "Enable feature",
       params: {},
-      options: { required: false, type: "boolean" },
+      promptOptions: { required: false, type: "boolean" },
     });
 
     expect(readlineMocks.question).toHaveBeenCalledWith(
       generateTerminalMessage(
-        "Enable feature |reset|(y/n) |gray|(press Enter to leave empty)|reset|: ",
+        "Enable feature |reset|(y/n) |gray|(press Enter to leave empty)|reset| ",
         {},
       ),
     );
@@ -96,7 +96,7 @@ describe("requestTerminalInput", () => {
     const result = await requestTerminalInput({
       message: "Enable feature?",
       params: {},
-      options: { required: false, type: "boolean" },
+      promptOptions: { required: false, type: "boolean" },
     });
 
     expect(readlineMocks.question).toHaveBeenCalledTimes(2);
@@ -124,7 +124,7 @@ describe("requestTerminalInput", () => {
     const result = await requestTerminalInput({
       message: "Enter value",
       params: {},
-      options: { required: true },
+      promptOptions: { required: true },
     });
 
     expect(readlineMocks.question).toHaveBeenCalledTimes(2);
