@@ -281,9 +281,8 @@ Acclimate.run(root);
 - [ ] Add default `help` command and `--help` option. This should show the CLI
       description and all param documentation.
 - [ ] Make the `description` actually get printed.
-- [ ] Show all CLI param descriptions if command is run with no arguments or if
+- [x] Show all CLI param descriptions if command is run with no arguments or if
       there is a param-related error.
-- [ ] Add helper functions to log to stdout in different colors
-- [ ] Add logic for `askIfEmpty` to enter an interactive mode to receive inputs
+- [x] Add helper functions to log to stdout in different colors
+- [x] Add logic for `askIfEmpty` to enter an interactive mode to receive inputs
       for different params.
-- [ ] Add an option to only `askIfEmptyAndRequired`.
