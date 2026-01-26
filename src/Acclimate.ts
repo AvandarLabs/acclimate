@@ -70,7 +70,18 @@ type Acclimate = {
   requestInput: (options: {
     message: string;
     params: Record<string, string>;
-    options: { required: boolean; type?: "string" | "number" | "boolean" };
+    responseOptions: {
+      required: boolean;
+      type?: "string" | "number" | "boolean";
+
+      /*
+       * Default value to use if the user enters an empty response.
+       *
+       * If the option is `required` and the user doesn't supply a value, we will
+       * not show an error if there is a `defaultValue` we can use.
+       */
+      defaultValue?: string | number | boolean;
+    };
   }) => Promise<string | undefined>;
 };
 

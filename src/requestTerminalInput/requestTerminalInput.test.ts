@@ -41,7 +41,7 @@ describe("requestTerminalInput", () => {
     const result = await requestTerminalInput({
       message: "|bright_cyan|Target for $env$|reset|",
       params: { env: "dev" },
-      promptOptions: { required: false },
+      responseOptions: { required: false },
     });
 
     expect(readlineMocks.question).toHaveBeenCalledWith(
@@ -59,7 +59,7 @@ describe("requestTerminalInput", () => {
     const result = await requestTerminalInput({
       message: "Provide a note",
       params: {},
-      promptOptions: { required: false },
+      responseOptions: { required: false },
     });
 
     expect(result).toBeUndefined();
@@ -71,7 +71,7 @@ describe("requestTerminalInput", () => {
     await requestTerminalInput({
       message: "Enable feature",
       params: {},
-      promptOptions: { required: false, type: "boolean" },
+      responseOptions: { required: false, type: "boolean" },
     });
 
     expect(readlineMocks.question).toHaveBeenCalledWith(
@@ -96,7 +96,7 @@ describe("requestTerminalInput", () => {
     const result = await requestTerminalInput({
       message: "Enable feature?",
       params: {},
-      promptOptions: { required: false, type: "boolean" },
+      responseOptions: { required: false, type: "boolean" },
     });
 
     expect(readlineMocks.question).toHaveBeenCalledTimes(2);
@@ -124,7 +124,7 @@ describe("requestTerminalInput", () => {
     const result = await requestTerminalInput({
       message: "Enter value",
       params: {},
-      promptOptions: { required: true },
+      responseOptions: { required: true },
     });
 
     expect(readlineMocks.question).toHaveBeenCalledTimes(2);

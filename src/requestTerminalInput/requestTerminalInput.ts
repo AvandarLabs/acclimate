@@ -2,26 +2,29 @@ import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { generateTerminalMessage } from "@/generateTerminalMessage";
 
-const COLOR_TOKEN_REGEX = /\|[a-zA-Z_]+\|/g;
-
 /**
  * Prompt the user for terminal input, optionally enforcing a non-empty value.
  */
 export async function requestTerminalInput(options: {
   message: string;
   params: Record<string, string>;
-  promptOptions: {
+  responseOptions: {
     required: boolean;
     type?: "string" | "number" | "boolean";
 
-    /** The default value to use if the user provides an empty response */
+    /*
+     * Default value to use if the user enters an empty response.
+     *
+     * If the option is `required` and the user doesn't supply a value, we will
+     * not show an error if there is a `defaultValue` we can use.
+     */
     defaultValue?: string | number | boolean;
   };
 }): Promise<string | undefined> {
   const {
     message,
     params,
-    promptOptions: { required, type, defaultValue },
+    responseOptions: { required, type, defaultValue },
   } = options;
   const notice =
     defaultValue !== undefined ? " |gray|(press Enter to use default)|reset|"

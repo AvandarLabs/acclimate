@@ -153,7 +153,7 @@ async function askForValue(options: {
   return requestTerminalInput({
     message: coloredMessage,
     params: {},
-    promptOptions: {
+    responseOptions: {
       required: argConfig.required,
       type: argConfig.type,
       defaultValue: argConfig.defaultValue,
