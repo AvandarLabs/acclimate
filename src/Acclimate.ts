@@ -59,7 +59,10 @@ type Acclimate = {
    * // ^ the "Error:" portion will be red
    *
    */
-  log: (message: string, params?: Record<string, string | undefined>) => void;
+  log: (
+    message: string,
+    params?: Record<string, string | boolean | number | null | undefined>,
+  ) => void;
 
   /**
    * Prompt the user for interactive input in the terminal.
@@ -90,7 +93,10 @@ export const Acclimate: Acclimate = {
   run: (cli: AnyCLI) => {
     void runCLI({ cli, input: process.argv.slice(2) });
   },
-  log: (message: string, params: Record<string, string | undefined> = {}) => {
+  log: (
+    message: string,
+    params: Record<string, string | boolean | number | null | undefined> = {},
+  ) => {
     console.log(generateTerminalMessage(message, params));
   },
   requestInput: (options) => {

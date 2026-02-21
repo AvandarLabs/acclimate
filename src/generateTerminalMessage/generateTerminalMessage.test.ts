@@ -31,4 +31,22 @@ describe("generateTerminalMessage", () => {
       "Target: ",
     );
   });
+
+  it("interpolates number, boolean, and null param values", () => {
+    expect(
+      generateTerminalMessage(
+        "Count: $count$ Active: $active$ Empty: $empty$",
+        { count: 0, active: false, empty: null },
+      ),
+    ).toBe("Count: 0 Active: false Empty: null");
+  });
+
+  it("handles mixed primitive params including undefined", () => {
+    expect(
+      generateTerminalMessage(
+        "Retries: $retries$ Enabled: $enabled$ Label: $label$ Note: $note$",
+        { retries: 3, enabled: true, label: null, note: undefined },
+      ),
+    ).toBe("Retries: 3 Enabled: true Label: null Note: ");
+  });
 });

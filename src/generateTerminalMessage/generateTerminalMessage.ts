@@ -29,15 +29,15 @@ const COLOR_TOKEN_REGEX = /\|([a-zA-Z_]+)\|/g;
  */
 function interpolateParams(
   message: string,
-  params: Record<string, string | undefined>,
-) {
-  return message.replace(PARAM_TOKEN_REGEX, (match, key: string) => {
+  params: Record<string, string | boolean | number | null | undefined>,
+): string {
+  return message.replace(PARAM_TOKEN_REGEX, (match: string, key: string) => {
     void match;
     const value = params[key];
     if (value === undefined) {
       return "";
     }
-    return value;
+    return String(value);
   });
 }
 
@@ -87,7 +87,7 @@ function applyColors(message: string) {
  */
 export function generateTerminalMessage(
   message: string,
-  params: Record<string, string | undefined> = {},
+  params: Record<string, string | boolean | number | null | undefined> = {},
 ): string {
   const hasColorToken = Boolean(message.match(COLOR_TOKEN_REGEX));
   const endsWithReset = message.trimEnd().endsWith("|reset|");
