@@ -277,6 +277,7 @@ Acclimate.run(root);
 
 ## To do
 
+- [ ] When a required option or positional arg is missing this should throw a clean user-friendly error message, rather than a stack trace. This is not an internal error.
 - [ ] Add semantic functions such as Acclimate.printSuccess, .printInfo, .printWarn and .printError
 - [ ] Allow user to configure semantic colors with Acclimate.setTheme()
 - [ ] Add a beforeAll() function to handle global args
