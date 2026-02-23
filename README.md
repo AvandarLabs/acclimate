@@ -277,10 +277,11 @@ Acclimate.run(root);
 
 ## To do
 
+- [ ] Add a beforeAll() function to handle global args
 - [ ] Add semantic arguments: e.g. email (which has a default validator)
 - [ ] Add default `help` command and `--help` option. This should show the CLI
       description and all param documentation.
-- [ ] Make the `description` actually get printed.
+- [x] Make the `description` actually get printed.
 - [x] Show all CLI param descriptions if command is run with no arguments or if
       there is a param-related error.
 - [x] Add helper functions to log to stdout in different colors
