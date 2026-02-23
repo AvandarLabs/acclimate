@@ -4,25 +4,12 @@ import { generateHelpText } from "./generateHelpText";
 import { generateTerminalMessage } from "@/generateTerminalMessage/generateTerminalMessage";
 
 describe("generateHelpText", () => {
-  it("formats the name, description, and empty sections", () => {
+  it("formats the name and description, omitting empty sections", () => {
     const cli = createCLI("acclimate").description("A friendly CLI");
 
     expect(generateHelpText(cli)).toBe(
       generateTerminalMessage(
-        "|bright_cyan|acclimate|reset|\n" +
-          "  |gray|A friendly CLI|reset|\n" +
-          "\n" +
-          "|bright_yellow|Positional Arguments|reset|\n" +
-          "  |gray|None|reset|\n" +
-          "\n" +
-          "|bright_yellow|Options|reset|\n" +
-          "  |gray|None|reset|\n" +
-          "\n" +
-          "|bright_yellow|Global Options|reset|\n" +
-          "  |gray|None|reset|\n" +
-          "\n" +
-          "|bright_yellow|Commands|reset|\n" +
-          "  |gray|None|reset|",
+        "|bright_cyan|acclimate|reset|\n" + "  |gray|A friendly CLI|reset|",
       ),
     );
   });
@@ -80,10 +67,7 @@ describe("generateHelpText", () => {
           "  |bright_white|--mode, -m|reset| (string)|reset| |red|required|reset| - |gray|Mode|reset|\n" +
           "\n" +
           "|bright_yellow|Global Options|reset|\n" +
-          "  |bright_white|--env, -e|reset| (string)|reset| |gray|optional|reset| - |gray|Environment|reset| |gray|[default: \"dev\"]|reset|\n" +
-          "\n" +
-          "|bright_yellow|Commands|reset|\n" +
-          "  |gray|None|reset|",
+          "  |bright_white|--env, -e|reset| (string)|reset| |gray|optional|reset| - |gray|Environment|reset| |gray|[default: \"dev\"]|reset|",
       ),
     );
   });
@@ -102,53 +86,18 @@ describe("generateHelpText", () => {
         "|bright_cyan|root|reset|\n" +
           "  |gray|Root CLI|reset|\n" +
           "\n" +
-          "|bright_yellow|Positional Arguments|reset|\n" +
-          "  |gray|None|reset|\n" +
-          "\n" +
-          "|bright_yellow|Options|reset|\n" +
-          "  |gray|None|reset|\n" +
-          "\n" +
-          "|bright_yellow|Global Options|reset|\n" +
-          "  |gray|None|reset|\n" +
-          "\n" +
           "|bright_yellow|Commands|reset|\n" +
-          "  |bright_white|alpha|reset| - |gray|Alpha command|reset|\n" +
-          "  |bright_white|beta|reset| - |gray|Beta command|reset|\n" +
           "\n" +
           "    |bright_cyan|alpha|reset|\n" +
           "      |gray|Alpha command|reset|\n" +
           "\n" +
-          "    |bright_yellow|Positional Arguments|reset|\n" +
-          "      |gray|None|reset|\n" +
-          "\n" +
-          "    |bright_yellow|Options|reset|\n" +
-          "      |gray|None|reset|\n" +
-          "\n" +
-          "    |bright_yellow|Global Options|reset|\n" +
-          "      |gray|None|reset|\n" +
-          "\n" +
-          "    |bright_yellow|Commands|reset|\n" +
-          "      |bright_yellow|Available Commands:|reset| |gray|None|reset|\n" +
-          "\n" +
           "    |bright_cyan|beta|reset|\n" +
-          "      |gray|Beta command|reset|\n" +
-          "\n" +
-          "    |bright_yellow|Positional Arguments|reset|\n" +
-          "      |gray|None|reset|\n" +
-          "\n" +
-          "    |bright_yellow|Options|reset|\n" +
-          "      |gray|None|reset|\n" +
-          "\n" +
-          "    |bright_yellow|Global Options|reset|\n" +
-          "      |gray|None|reset|\n" +
-          "\n" +
-          "    |bright_yellow|Commands|reset|\n" +
-          "      |bright_yellow|Available Commands:|reset| |gray|None|reset|",
+          "      |gray|Beta command|reset|",
       ),
     );
   });
 
-  it("lists available commands at level 2 without further recursion", () => {
+  it("lists commands as bullets at level 2 with descriptions", () => {
     const dev = createCLI("dev")
       .description("Dev workflow")
       .addCommand("web", createCLI("web").description("Web server"))
@@ -160,16 +109,52 @@ describe("generateHelpText", () => {
 
     const helpText = generateHelpText(cli);
 
+    // Should have Commands header followed directly by bullets
+    expect(helpText).toContain(
+      generateTerminalMessage("|bright_yellow|Commands|reset|"),
+    );
     expect(helpText).toContain(
       generateTerminalMessage(
-        "|bright_yellow|Available Commands:|reset| |gray|db, web|reset|",
+        "• |bright_white|db|reset| - |gray|Database|reset|",
       ),
     );
+    expect(helpText).toContain(
+      generateTerminalMessage(
+        "• |bright_white|web|reset| - |gray|Web server|reset|",
+      ),
+    );
+    // Should not have "Available Commands:" header
+    expect(helpText).not.toContain("Available Commands:");
+    // Should not render full sub-command headers at level 3
     expect(helpText).not.toContain(
       generateTerminalMessage("|bright_cyan|db|reset|"),
     );
     expect(helpText).not.toContain(
       generateTerminalMessage("|bright_cyan|web|reset|"),
+    );
+  });
+
+  it("shows 'No description' for commands without descriptions at level 2", () => {
+    const dev = createCLI("dev")
+      .description("Dev workflow")
+      .addCommand("web", createCLI("web"))
+      .addCommand("db", createCLI("db"));
+
+    const cli = createCLI("root")
+      .description("Root CLI")
+      .addCommand("dev", dev);
+
+    const helpText = generateHelpText(cli);
+
+    expect(helpText).toContain(
+      generateTerminalMessage(
+        "• |bright_white|db|reset| - |dim|No description|reset|",
+      ),
+    );
+    expect(helpText).toContain(
+      generateTerminalMessage(
+        "• |bright_white|web|reset| - |dim|No description|reset|",
+      ),
     );
   });
 });

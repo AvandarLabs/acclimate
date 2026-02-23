@@ -277,6 +277,8 @@ Acclimate.run(root);
 
 ## To do
 
+- [ ] Add semantic functions such as Acclimate.printSuccess, .printInfo, .printWarn and .printError
+- [ ] Allow user to configure semantic colors with Acclimate.setTheme()
 - [ ] Add a beforeAll() function to handle global args
 - [ ] Add semantic arguments: e.g. email (which has a default validator)
 - [ ] Add default `help` command and `--help` option. This should show the CLI

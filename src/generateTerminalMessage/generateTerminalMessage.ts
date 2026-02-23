@@ -1,5 +1,6 @@
 const COLOR_CODES: Record<string, string> = {
   reset: "\x1b[0m",
+  dim: "\x1b[2m",
   black: "\x1b[30m",
   red: "\x1b[31m",
   green: "\x1b[32m",

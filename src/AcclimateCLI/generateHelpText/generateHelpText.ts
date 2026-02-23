@@ -29,10 +29,6 @@ function formatSectionTitle(title: SectionTitle): string {
   return `|bright_yellow|${title}|reset|`;
 }
 
-function formatNoneLine(): string {
-  return "  |gray|None|reset|";
-}
-
 function formatDefaultValue(
   value: CLIParamWithRequired["defaultValue"],
 ): string {
@@ -66,31 +62,22 @@ function formatSection(
   params: readonly CLIParamWithRequired[],
 ): string[] {
   if (params.length === 0) {
-    return [formatSectionTitle(title), formatNoneLine()];
+    return [];
   }
 
   return [formatSectionTitle(title), ...params.map(formatParamLine)];
 }
 
-function formatCommandLine(options: {
-  name: string;
-  description?: string;
-}): string {
-  const { name, description } = options;
-  const label = description ?? "No description";
-  return `  |bright_white|${name}|reset| - |gray|${label}|reset|`;
-}
-
-function formatAvailableCommandsLine(commands: string[]): string {
-  const label =
-    commands.length === 0 ?
-      "None"
-    : commands
-        .map((cmd) => {
-          return cmd;
-        })
-        .join(", ");
-  return `|bright_yellow|Available Commands:|reset| |gray|${label}|reset|`;
+function formatCommandBullets(
+  commands: { name: string; description?: string }[],
+): string[] {
+  return commands.map(({ name, description }) => {
+    const descLabel =
+      description !== undefined ?
+        `|gray|${description}|reset|`
+      : `|dim|No description|reset|`;
+    return `  • |bright_white|${name}|reset| - ${descLabel}`;
+  });
 }
 
 function _generateHelpTextHelper<
@@ -126,9 +113,6 @@ function _generateHelpTextHelper<
   const sortedCommands = Object.entries(cli.state.commands).sort(([a], [b]) => {
     return a.localeCompare(b);
   });
-  const commandNames = sortedCommands.map(([commandName]) => {
-    return commandName;
-  });
 
   const headerLines = [`|bright_cyan|${name}|reset|`];
   if (description !== undefined) {
@@ -136,23 +120,22 @@ function _generateHelpTextHelper<
   }
 
   let commandSection: string[];
-  if (level === 2) {
-    commandSection = [
-      formatSectionTitle("Commands"),
-      `  ${formatAvailableCommandsLine(commandNames)}`,
-    ];
-  } else if (sortedCommands.length === 0) {
-    commandSection = [formatSectionTitle("Commands"), formatNoneLine()];
-  } else {
-    commandSection = [
-      formatSectionTitle("Commands"),
-      ...sortedCommands.map(([commandName, commandCLI]) => {
-        return formatCommandLine({
-          name: commandName,
-          description: commandCLI.state.description,
-        });
+  if (sortedCommands.length === 0) {
+    commandSection = [];
+  } else if (level === 2) {
+    const commandsWithDescriptions = sortedCommands.map(
+      ([commandName, commandCLI]) => ({
+        name: commandName,
+        description: commandCLI.state.description,
       }),
+    );
+    commandSection = [
+      formatSectionTitle("Commands"),
+      ...formatCommandBullets(commandsWithDescriptions),
     ];
+  } else {
+    // At level 1, just show the header - sub-commands are rendered recursively below
+    commandSection = [formatSectionTitle("Commands")];
   }
 
   const sections = [
@@ -160,14 +143,11 @@ function _generateHelpTextHelper<
     formatSection("Options", optionParams),
     formatSection("Global Options", globalOptionParams),
     commandSection,
-  ];
+  ].filter((section) => section.length > 0);
 
-  const lines = [...headerLines, ""];
+  const lines = [...headerLines];
   sections.forEach((section, idx) => {
-    lines.push(...section);
-    if (idx < sections.length - 1) {
-      lines.push("");
-    }
+    lines.push("", ...section);
   });
 
   if (level === 1) {
