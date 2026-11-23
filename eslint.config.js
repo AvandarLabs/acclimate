@@ -77,7 +77,17 @@ const tsRules = {
 
 export default [
   importXConfigs.recommended,
-  { ignores: ["dist", "node_modules"] },
+  {
+    ignores: [
+      "dist",
+      "node_modules",
+      ".agents/**",
+      ".claude/**",
+      ".codex/**",
+      ".cursor/**",
+      ".opencode/**",
+    ],
+  },
   {
     files: ["**/*.{js,cjs,mjs}"],
     ...jseslint.configs.recommended,

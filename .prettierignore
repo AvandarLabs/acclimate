@@ -1,0 +1,10 @@
+dist
+.dist
+node_modules
+coverage
+.agents
+.claude
+.codex
+.cursor
+.opencode
+.difit
