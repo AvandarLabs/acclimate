@@ -34,7 +34,8 @@
     "type": "tsc -p tsconfig.json --noEmit",
     "changeset": "changeset",
     "changeset:version": "changeset version && npm install --package-lock-only",
-    "release": "npm run build && changeset publish"
+    "release": "npm run build && changeset publish",
+    "release:changesets": "tsx scripts/release/runEnsureChangesets.ts"
   },
   "keywords": [
     "cli",
