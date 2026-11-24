@@ -55,4 +55,27 @@ describe("formatCLIError", () => {
       ].join("\n"),
     );
   });
+
+  it("renders plain text without ANSI escapes when color is false", () => {
+    const error = CLIError.unknownOption({
+      cliName: "demo",
+      optionName: "--bad",
+    }).withHelpContext({
+      commandPath: ["demo"],
+      hint: "Run demo --help to see available options and usage.",
+      usage: "USAGE BLOCK",
+    });
+
+    const formatted = formatCLIError(error, { color: false });
+
+    expect(formatted).toBe(
+      [
+        '❌ Error running demo: Unknown option "--bad"',
+        "  ⚠️ Run demo --help to see available options and usage.",
+        "",
+        "USAGE BLOCK",
+      ].join("\n"),
+    );
+    expect(formatted).not.toContain("\x1b[");
+  });
 });

@@ -35,12 +35,19 @@ Public exports from `@avandar/acclimate`:
 - `Acclimate`
 - `executeCLI`
 - `generateHelpText`
+- `requestChoiceMenu`
+- `requestTerminalInput`
+- `openTerminalSession`
+- `isColorEnabledForStream`
 - `CLIError` (with `error.code` of type `CLIErrorCode`, plus `cliName`,
   `commandPath`, `hint`, and `usage`)
 - Types: `IAcclimateCLI`, `AnyCLI`, `CLIExample`, `OutputStream`,
   `CLIParamScalarValue`, `CLIParamDataType`, `CLIPositionalParam`,
   `CLIScalarPositionalParam`, `CLIVariadicPositionalParam`, `CLIOptionParam`,
-  `CLICommandName`, `CLIFullOptionName`, `CLIOptionAlias`
+  `CLICommandName`, `CLIFullOptionName`, `CLIOptionAlias`, `ChoiceMenuItem`,
+  `ChoiceMenuOptions`, `RequestTerminalInputOptions`,
+  `RequestTerminalInputResponseOptions`, `TerminalInputStream`,
+  `TerminalOutputStream`, `TerminalSession`, `TerminalSessionOptions`
 
 ### `Acclimate`
 
@@ -55,26 +62,73 @@ Acclimate.createCLI(name: string): IAcclimateCLI
 #### `Acclimate.run(cli)`
 
 Run a CLI instance using `process.argv.slice(2)`. Handles built-in `-h`/`--help`
-on `stdout` (exit code `0`) and formats `CLIError` failures (such as unknown
-flags or missing required arguments) with a recovery hint and usage on `stderr`
-(setting `process.exitCode = 1`).
+on `stdout` (exit code `0`), built-in `--no-prompt` unattended execution,
+controlling-terminal (`/dev/tty`) choice menus and prompts, and `CLIError`
+formatting on `stderr` (setting `process.exitCode = 130` on prompt cancellation
+and `1` on other failures).
 
 ```ts
 Acclimate.run(cli: AnyCLI): void
 ```
 
+#### `Acclimate.log(message, params?, options?)`
+
+Write conversational progress or diagnostics to `stderr` (keeping `stdout` clean
+for machine-consumable data). Supports `$varName$` interpolation and `|<COLOR>|`
+tokens, stripping color automatically on redirected streams, `NO_COLOR`, or
+`TERM=dumb`.
+
+```ts
+Acclimate.log(
+  message: string,
+  params?: Record<string, string | boolean | number | null | undefined>,
+  options?: { stream?: TerminalOutputStream; color?: boolean },
+): void
+```
+
+#### `Acclimate.writeData(data, options?)` and `Acclimate.writeJson(value, options?)`
+
+Write intentional machine-consumable text or JSON strictly to `stdout` with zero
+ANSI styling or diagnostic chatter.
+
+```ts
+Acclimate.writeData(
+  data: string,
+  options?: { stream?: TerminalOutputStream; trailingNewline?: boolean },
+): void
+
+Acclimate.writeJson(
+  value: unknown,
+  options?: { stream?: TerminalOutputStream; pretty?: boolean },
+): void
+```
+
+#### `Acclimate.requestChoice(options)` and `Acclimate.requestInput(options)`
+
+Prompt interactively on the controlling terminal (`/dev/tty`, falling back to
+`stdin` + `stderr` only when both are TTYs) without touching `stdout` or
+consuming piped `stdin`. Choice menus support `Up`/`Down`, `j`/`k` wrapping,
+`g`/`G` jumps, `1`-`9`, `Enter` confirm, and `Ctrl-C`/`EOF` cancellation that
+restores raw terminal mode.
+
 #### `executeCLI(options)`
 
 Async execution boundary for embedding or testing a CLI with injectable
-`input`, `stdout`, `stderr`, and `onExitCode`. Resolves to `0` on success or
-help output, and `1` on error.
+`input`, `stdin`, `stdout`, `stderr`, `env`, `terminal`, `interactive`,
+`openTty`, and `onExitCode`. Resolves to `0` on success or help output, `130`
+on prompt cancellation, and `1` on other failures.
 
 ```ts
 executeCLI(options: {
   cli: AnyCLI;
   input: readonly string[];
-  stdout?: OutputStream;
-  stderr?: OutputStream;
+  stdin?: TerminalInputStream;
+  stdout?: TerminalOutputStream;
+  stderr?: TerminalOutputStream;
+  env?: Readonly<Record<string, string | undefined>>;
+  terminal?: TerminalSession;
+  interactive?: boolean;
+  openTty?: () => Promise<TerminalSession | undefined>;
   onExitCode?: (exitCode: number) => void;
 }): Promise<number>
 ```
@@ -224,12 +278,21 @@ See [docs/argument-parsing.md](docs/argument-parsing.md) for full details.
   (purpose, synopsis, positional args, options, inherited global options,
   choices, defaults, examples, and sub-commands) to `stdout` and exits `0`.
   Tokens after `--` pass through verbatim as positional args.
+- **Interactive menus, `/dev/tty`, and unattended fallback**: See
+  [docs/interactive-prompts.md](docs/interactive-prompts.md). Parameters with
+  `askIfEmpty` use interactive choice menus for `choices` and `boolean` values
+  on `/dev/tty` (`Up`/`Down`, `j`/`k` wrapping, `g`/`G`, `Enter`, `Ctrl-C`/`EOF`),
+  and bare actionless multi-command CLIs open a sub-command selector menu.
+  Without a TTY, in CI, or with built-in `--no-prompt`, missing required values
+  fail promptly with an actionable flag/invocation hint instead of hanging, and
+  optional values use defaults.
 - **Errors**: unknown flags before `--`, missing option values, missing required
   args/options, invalid numbers, values outside `choices`, and failed validators
   fail with `CLIError` (`code`, `commandPath`, `hint`, `usage`). When run via
   `Acclimate.run(cli)` or `executeCLI`, errors print a red message, an indented
-  yellow `Run <cmd> --help...` recovery hint, and command usage to `stderr`,
-  leave `stdout` empty, and exit nonzero (`process.exitCode = 1`).
+  yellow recovery hint, and command usage to `stderr` (stripping color when
+  redirected or `NO_COLOR` is set), leave `stdout` empty, and exit nonzero
+  (`130` for `prompt_cancelled`, `1` for other failures).
 
 ## Prerequisites
 

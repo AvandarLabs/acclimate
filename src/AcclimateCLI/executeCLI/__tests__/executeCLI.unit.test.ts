@@ -1,8 +1,8 @@
-import { execFile } from "node:child_process";
-import path from "node:path";
+import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
 import { createCLI } from "@/AcclimateCLI/createCLI";
-import { executeCLI } from "./executeCLI";
+import { executeCLI } from "../executeCLI";
+import type { TerminalSession } from "@/terminalSession/terminalSession.types";
 
 function _createMemoryStream() {
   const chunks: string[] = [];
@@ -54,70 +54,7 @@ function _makeCoverageCLI(onAction: () => void) {
     .addCommand("coverage", coverageCLI);
 }
 
-const SUBPROCESS_FIXTURE_SCRIPT = `
-  import { Acclimate } from "./src/index";
-  const coverage = Acclimate.createCLI("coverage")
-    .description("Check coverage")
-    .addPositionalArg({
-      name: "paths",
-      type: "string",
-      required: true,
-      variadic: true,
-      description: "Paths to check",
-    })
-    .addOption({
-      name: "--format",
-      aliases: ["-f"],
-      type: "string",
-      required: false,
-      choices: ["stylish", "json"],
-      defaultValue: "stylish",
-      description: "Output format",
-    })
-    .addExample("avandar-lint coverage src/")
-    .action(({ paths, format }) => {
-      console.log("ACTION_RAN:" + JSON.stringify({ paths, format }));
-    });
-  const root = Acclimate.createCLI("avandar-lint")
-    .description("Workspace linter")
-    .addGlobalOption({
-      name: "--verbose",
-      aliases: ["-v"],
-      type: "boolean",
-      required: false,
-      defaultValue: false,
-      description: "Verbose output",
-    })
-    .addCommand("coverage", coverage);
-  Acclimate.run(root);
-`;
-
-function _runAcclimateSubprocess(
-  args: readonly string[],
-): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-  const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
-
-  return new Promise((resolve, reject) => {
-    execFile(
-      tsxBin,
-      ["-e", SUBPROCESS_FIXTURE_SCRIPT, "--", "avandar-lint", ...args],
-      { cwd: process.cwd() },
-      (error, stdout, stderr) => {
-        if (!error) {
-          resolve({ exitCode: 0, stdout, stderr });
-          return;
-        }
-        if (typeof error.code === "number") {
-          resolve({ exitCode: error.code, stdout, stderr });
-          return;
-        }
-        reject(new Error(error.message));
-      },
-    );
-  });
-}
-
-describe("executeCLI", () => {
+describe("executeCLI - unit boundary", () => {
   it("writes help to stdout, leaves stderr empty, and returns exit code 0 for --help and -h", async () => {
     const action = vi.fn<() => void>();
     const onExitCode = vi.fn<(exitCode: number) => void>();
@@ -219,38 +156,98 @@ describe("executeCLI", () => {
     expect(stderr.getOutput()).toContain("unexpected runtime failure");
   });
 
-  it("exits 0 with help on stdout and empty stderr when Acclimate.run receives --help or subcommand -h", async () => {
-    const rootHelp = await _runAcclimateSubprocess(["--help"]);
-    expect(rootHelp.exitCode).toBe(0);
-    expect(rootHelp.stdout).toContain("avandar-lint");
-    expect(rootHelp.stdout).toContain("Workspace linter");
-    expect(rootHelp.stdout).not.toContain("ACTION_RAN");
-    expect(rootHelp.stderr).toBe("");
+  it("returns exit code 130 with concise cancellation stderr and empty stdout on Ctrl-C in a menu", async () => {
+    const action = vi.fn<() => void>();
+    const onExitCode = vi.fn<(exitCode: number) => void>();
+    const stdout = _createMemoryStream();
+    const stderr = _createMemoryStream();
+    const ttyInput = Object.assign(new PassThrough(), {
+      isTTY: true,
+      isRaw: false,
+      setRawMode: (mode: boolean) => {
+        ttyInput.isRaw = mode;
+      },
+    });
+    const ttyOutput = _createMemoryStream();
+    const terminal: TerminalSession = {
+      input: ttyInput,
+      output: Object.assign(ttyOutput, { isTTY: true }),
+      isColorEnabled: true,
+      isRawModeSupported: true,
+      close: () => {
+        return Promise.resolve();
+      },
+    };
 
-    const subHelp = await _runAcclimateSubprocess(["coverage", "-h"]);
-    expect(subHelp.exitCode).toBe(0);
-    expect(subHelp.stdout).toContain("avandar-lint coverage");
-    expect(subHelp.stdout).toContain("--verbose, -v");
-    expect(subHelp.stdout).toContain("avandar-lint coverage src/");
-    expect(subHelp.stdout).not.toContain("ACTION_RAN");
-    expect(subHelp.stderr).toBe("");
+    const cli = createCLI("deploy")
+      .addOption({
+        name: "--env",
+        type: "string",
+        required: true,
+        choices: ["dev", "prod"] as const,
+        askIfEmpty: true,
+      })
+      .action(action);
+
+    const exitPromise = executeCLI({
+      cli,
+      input: [],
+      stdout,
+      stderr,
+      terminal,
+      onExitCode,
+    });
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 10);
+    });
+    ttyInput.write("\x03");
+
+    const exitCode = await exitPromise;
+    expect(exitCode).toBe(130);
+    expect(onExitCode).toHaveBeenCalledWith(130);
+    expect(action).not.toHaveBeenCalled();
+    expect(stdout.getOutput()).toBe("");
+    expect(stderr.getOutput()).toContain("Cancelled");
+    expect(stderr.getOutput()).not.toContain("Usage");
+    expect(ttyInput.isRaw).toBe(false);
   });
 
-  it("exits 1 with error, recovery hint, and usage on stderr and empty stdout when Acclimate.run receives an unknown flag", async () => {
-    const result = await _runAcclimateSubprocess(["coverage", "--bogus"]);
+  it("honors --no-prompt even when an interactive terminal session is supplied", async () => {
+    const action = vi.fn<() => void>();
+    const stdout = _createMemoryStream();
+    const stderr = _createMemoryStream();
+    const terminal: TerminalSession = {
+      input: Object.assign(new PassThrough(), { isTTY: true }),
+      output: Object.assign(_createMemoryStream(), { isTTY: true }),
+      isColorEnabled: true,
+      isRawModeSupported: true,
+      close: () => {
+        return Promise.resolve();
+      },
+    };
+    const cli = createCLI("deploy")
+      .addOption({
+        name: "--env",
+        type: "string",
+        required: true,
+        choices: ["dev", "prod"] as const,
+        askIfEmpty: true,
+      })
+      .action(action);
 
-    expect(result.exitCode).toBe(1);
-    expect(result.stdout).toBe("");
-    expect(result.stderr).toContain(
-      '❌ Error running avandar-lint coverage: Unknown option "--bogus"',
-    );
-    expect(result.stderr).toContain(
-      "⚠️ Run avandar-lint coverage --help to see available options and usage.",
-    );
-    expect(result.stderr).toContain(
-      "avandar-lint coverage <paths...> [options]",
-    );
-    expect(result.stderr).not.toContain("ACTION_RAN");
-    expect(result.stderr).not.toContain("UnhandledPromiseRejection");
+    const exitCode = await executeCLI({
+      cli,
+      input: ["--no-prompt"],
+      stdout,
+      stderr,
+      terminal,
+    });
+
+    expect(exitCode).toBe(1);
+    expect(action).not.toHaveBeenCalled();
+    expect(stdout.getOutput()).toBe("");
+    expect(stderr.getOutput()).toContain("--env");
+    expect(stderr.getOutput()).toContain("deploy --env");
   });
 });

@@ -42,6 +42,8 @@ type CLIErrorInfo =
         paramValue: CLIParamDataType;
       };
     }
+  | { code: "prompt_cancelled"; details: undefined }
+  | { code: "interactive_input_unavailable"; details: undefined }
   | { code: "unknown_error"; details: undefined };
 
 /** Machine-readable error code reported by `CLIError` instances. */
@@ -99,11 +101,13 @@ export class CLIError extends Error {
     cliName: string;
     optionName: string;
     message?: string;
+    hint?: string;
   }): CLIError {
     return new CLIError({
       cliName: options.cliName,
       message:
         options.message ?? `Required option "${options.optionName}" is missing`,
+      hint: options.hint,
       code: "missing_required_option",
       details: { optionName: options.optionName },
     });
@@ -124,16 +128,19 @@ export class CLIError extends Error {
     });
   }
 
+  /** Build an error when a required positional argument is not supplied. */
   static missingRequiredPositionalArg(options: {
     cliName: string;
     positionalArgName: string;
     message?: string;
+    hint?: string;
   }): CLIError {
     return new CLIError({
       cliName: options.cliName,
       message:
         options.message ??
         `Required positional argument "${options.positionalArgName}" is missing`,
+      hint: options.hint,
       code: "missing_required_positional_arg",
       details: { positionalArgName: options.positionalArgName },
     });
@@ -203,6 +210,36 @@ export class CLIError extends Error {
     });
   }
 
+  /** Build an error when an interactive prompt is cancelled via Ctrl-C or EOF. */
+  static promptCancelled(options: {
+    cliName: string;
+    message?: string;
+  }): CLIError {
+    return new CLIError({
+      cliName: options.cliName,
+      message: options.message ?? "Cancelled by user.",
+      code: "prompt_cancelled",
+      details: undefined,
+    });
+  }
+
+  /** Build an error when interactive prompting is needed without a TTY. */
+  static interactiveInputUnavailable(options: {
+    cliName: string;
+    message?: string;
+    hint?: string;
+  }): CLIError {
+    return new CLIError({
+      cliName: options.cliName,
+      message:
+        options.message ??
+        "Interactive input is unavailable in unattended mode.",
+      hint: options.hint,
+      code: "interactive_input_unavailable",
+      details: undefined,
+    });
+  }
+
   constructor(options: CLIErrorOptions) {
     super(`❌ Error running ${options.cliName}: ${options.message}`);
     this.code = options.code;
@@ -223,8 +260,8 @@ export class CLIError extends Error {
   withHelpContext(
     context: Readonly<{
       commandPath: readonly string[];
-      hint: string;
-      usage: string;
+      hint?: string;
+      usage?: string;
     }>,
   ): CLIError {
     const commandLabel = context.commandPath.join(" ");

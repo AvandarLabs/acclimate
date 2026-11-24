@@ -1,19 +1,26 @@
 import { CLIError } from "@/CLIError";
 import { attachCLIErrorHelpContext } from "../attachCLIErrorHelpContext";
+import {
+  findOptionEntry,
+  getScanCLIState,
+  isBuiltinHelpFlag,
+  isNegativeNumberToken,
+  isOptionLikeToken,
+  mergeParentGlobalOptions,
+  splitInlineOptionToken,
+} from "./cliOptionLookupHelpers";
+import type { OptionLookupEntry } from "./cliOptionLookupHelpers";
 import type {
   AnyCLI,
-  CLICommandName,
   CLIFullOptionName,
-  CLIOptionParam,
 } from "@/AcclimateCLI/AcclimateCLI.types";
-
-const NEGATIVE_NUMBER_PATTERN = /^-(\d+(\.\d+)?|\.\d+)$/;
 
 type TokenizeCLIInputOptions = {
   cli: AnyCLI;
   input: readonly string[];
   commandPath?: readonly string[];
   inheritedGlobalOptionArgs?: Readonly<Record<CLIFullOptionName, string>>;
+  inheritedNoPrompt?: boolean;
 };
 
 /** Result of tokenizing raw CLI argv tokens against a command hierarchy. */
@@ -21,33 +28,22 @@ export type TokenizedCLIInput = {
   targetCLI: AnyCLI;
   commandPath: string[];
   isHelpRequested: boolean;
+  isNoPromptRequested: boolean;
   rawPositionalArgs: string[];
   rawOptionArgs: Record<CLIFullOptionName, string>;
   rawGlobalOptionArgs: Record<CLIFullOptionName, string>;
 };
 
-type OptionLookupEntry = {
-  canonicalName: CLIFullOptionName;
-  config: CLIOptionParam;
-  isGlobal: boolean;
-};
-
 type TokenScanState = {
   isAfterDoubleDash: boolean;
   isHelpRequested: boolean;
+  isNoPromptRequested: boolean;
   pendingOption: OptionLookupEntry | undefined;
   scanError: CLIError | undefined;
   rawPositionalArgs: string[];
   rawOptionArgs: Record<CLIFullOptionName, string>;
   rawGlobalOptionArgs: Record<CLIFullOptionName, string>;
   delegatedResult: TokenizedCLIInput | undefined;
-};
-
-type RuntimeScanCLIState = {
-  aliases: Record<string, CLIFullOptionName>;
-  commands: Record<CLICommandName, AnyCLI>;
-  optionArgs: Record<string, CLIOptionParam>;
-  globalOptionArgs: Record<string, CLIOptionParam>;
 };
 
 type StepTokenOptions = {
@@ -58,82 +54,21 @@ type StepTokenOptions = {
   remainingTokens: readonly string[];
 };
 
-function _getScanCLIState(cli: AnyCLI): RuntimeScanCLIState {
-  // AnyCLI erases builder generics; narrow once at the tokenizer boundary.
-  return cli.state as RuntimeScanCLIState;
-}
-
-function _isOptionLikeToken(token: string): boolean {
-  return token.length > 1 && token.startsWith("-");
-}
-
-function _isNegativeNumberToken(token: string): boolean {
-  return NEGATIVE_NUMBER_PATTERN.test(token);
-}
-
-function _splitInlineOptionToken(token: string): {
-  rawFlag: string;
-  inlineValue: string | undefined;
-} {
-  const equalsIndex = token.indexOf("=");
-  if (equalsIndex === -1) {
-    return { rawFlag: token, inlineValue: undefined };
-  }
-  return {
-    rawFlag: token.slice(0, equalsIndex),
-    inlineValue: token.slice(equalsIndex + 1),
-  };
-}
-
-function _findOptionEntry(options: {
-  cli: AnyCLI;
-  rawFlag: string;
-}): OptionLookupEntry | undefined {
-  const { aliases, globalOptionArgs, optionArgs } = _getScanCLIState(
-    options.cli,
-  );
-
-  const canonicalCandidate = aliases[options.rawFlag] ?? options.rawFlag;
-  const globalConfig = globalOptionArgs[canonicalCandidate];
-  if (globalConfig) {
-    return {
-      canonicalName: globalConfig.name,
-      config: globalConfig,
-      isGlobal: true,
-    };
-  }
-
-  const localConfig = optionArgs[canonicalCandidate];
-  if (localConfig) {
-    return {
-      canonicalName: localConfig.name,
-      config: localConfig,
-      isGlobal: false,
-    };
-  }
-
-  return undefined;
-}
-
-function _isBuiltinHelpFlag(options: { cli: AnyCLI; token: string }): boolean {
-  const { cli, token } = options;
-  return (
-    (token === "--help" || token === "-h") &&
-    _findOptionEntry({ cli, rawFlag: "--help" }) === undefined &&
-    (token === "--help" ||
-      _findOptionEntry({ cli, rawFlag: "-h" }) === undefined)
-  );
-}
-
 function _recordOptionValue(options: {
   state: Readonly<TokenScanState>;
   entry: Readonly<OptionLookupEntry>;
   rawValue: string;
 }): TokenScanState {
   const { state, entry, rawValue } = options;
+  const nextNoPrompt =
+    entry.canonicalName === "--no-prompt" ?
+      rawValue !== "false"
+    : state.isNoPromptRequested;
+
   if (entry.isGlobal) {
     return {
       ...state,
+      isNoPromptRequested: nextNoPrompt,
       pendingOption: undefined,
       rawGlobalOptionArgs: {
         ...state.rawGlobalOptionArgs,
@@ -144,6 +79,7 @@ function _recordOptionValue(options: {
 
   return {
     ...state,
+    isNoPromptRequested: nextNoPrompt,
     pendingOption: undefined,
     rawOptionArgs: {
       ...state.rawOptionArgs,
@@ -152,34 +88,24 @@ function _recordOptionValue(options: {
   };
 }
 
-function _mergeParentGlobalOptions(options: {
-  parentCLI: AnyCLI;
-  commandCLI: AnyCLI;
-}): AnyCLI {
-  const { globalOptionArgs } = _getScanCLIState(options.parentCLI);
-  return Object.values(globalOptionArgs).reduce((mergedCLI, optionConfig) => {
-    return mergedCLI.addGlobalOption(optionConfig);
-  }, options.commandCLI);
-}
-
 function _consumePendingOptionToken(
   options: Readonly<Omit<StepTokenOptions, "remainingTokens">>,
 ): TokenScanState {
   const { cli, commandPath, state, token } = options;
   const pendingOption = state.pendingOption!;
-  if (_isBuiltinHelpFlag({ cli, token })) {
+  if (isBuiltinHelpFlag({ cli, token })) {
     return { ...state, pendingOption: undefined, isHelpRequested: true };
   }
 
   const isDoubleDash = token === "--";
   const isRegisteredFlag =
-    _isOptionLikeToken(token) &&
-    _findOptionEntry({
+    isOptionLikeToken(token) &&
+    findOptionEntry({
       cli,
-      rawFlag: _splitInlineOptionToken(token).rawFlag,
+      rawFlag: splitInlineOptionToken(token).rawFlag,
     }) !== undefined;
   const isUnregisteredFlag =
-    _isOptionLikeToken(token) && !_isNegativeNumberToken(token);
+    isOptionLikeToken(token) && !isNegativeNumberToken(token);
 
   if (isDoubleDash || isRegisteredFlag || isUnregisteredFlag) {
     const missingError = attachCLIErrorHelpContext({
@@ -209,15 +135,21 @@ function _consumeFlagToken(
   options: Readonly<Omit<StepTokenOptions, "remainingTokens">>,
 ): TokenScanState {
   const { cli, commandPath, state, token } = options;
-  if (_isBuiltinHelpFlag({ cli, token })) {
+  if (isBuiltinHelpFlag({ cli, token })) {
     return { ...state, isHelpRequested: true };
   }
 
-  const { rawFlag, inlineValue } = _splitInlineOptionToken(token);
-  const entry = _findOptionEntry({ cli, rawFlag });
+  const { rawFlag, inlineValue } = splitInlineOptionToken(token);
+  const entry = findOptionEntry({ cli, rawFlag });
 
   if (!entry) {
-    if (inlineValue === undefined && _isNegativeNumberToken(token)) {
+    if (rawFlag === "--no-prompt") {
+      return {
+        ...state,
+        isNoPromptRequested: inlineValue !== "false",
+      };
+    }
+    if (inlineValue === undefined && isNegativeNumberToken(token)) {
       return {
         ...state,
         rawPositionalArgs: [...state.rawPositionalArgs, token],
@@ -249,7 +181,7 @@ function _consumePositionalOrCommandToken(
   options: Readonly<StepTokenOptions>,
 ): TokenScanState {
   const { cli, commandPath, state, token, remainingTokens } = options;
-  const { commands } = _getScanCLIState(cli);
+  const { commands } = getScanCLIState(cli);
   const canMatchSubcommand =
     !state.isAfterDoubleDash &&
     state.scanError === undefined &&
@@ -258,7 +190,7 @@ function _consumePositionalOrCommandToken(
   const matchedCommandCLI = canMatchSubcommand ? commands[token] : undefined;
 
   if (matchedCommandCLI) {
-    const commandCLI = _mergeParentGlobalOptions({
+    const commandCLI = mergeParentGlobalOptions({
       parentCLI: cli,
       commandCLI: matchedCommandCLI,
     });
@@ -269,6 +201,7 @@ function _consumePositionalOrCommandToken(
         input: remainingTokens,
         commandPath: [...commandPath, token],
         inheritedGlobalOptionArgs: state.rawGlobalOptionArgs,
+        inheritedNoPrompt: state.isNoPromptRequested,
       }),
     };
   }
@@ -296,7 +229,7 @@ function _stepToken(options: Readonly<StepTokenOptions>): TokenScanState {
   if (token === "--") {
     return { ...state, isAfterDoubleDash: true };
   }
-  if (_isOptionLikeToken(token)) {
+  if (isOptionLikeToken(token)) {
     return _consumeFlagToken({ cli, commandPath, state, token });
   }
   return _consumePositionalOrCommandToken({
@@ -318,36 +251,27 @@ function _finalizeTokenScan(options: {
     return finalState.delegatedResult;
   }
 
-  if (finalState.isHelpRequested) {
-    return {
-      targetCLI: cli,
-      commandPath: [...commandPath],
-      isHelpRequested: true,
-      rawPositionalArgs: finalState.rawPositionalArgs,
-      rawOptionArgs: finalState.rawOptionArgs,
-      rawGlobalOptionArgs: finalState.rawGlobalOptionArgs,
-    };
-  }
-
-  if (finalState.scanError) {
-    throw finalState.scanError;
-  }
-
-  if (finalState.pendingOption) {
-    throw attachCLIErrorHelpContext({
-      cli,
-      commandPath,
-      error: CLIError.missingOptionValue({
-        cliName: commandPath.join(" "),
-        optionName: finalState.pendingOption.canonicalName,
-      }),
-    });
+  if (!finalState.isHelpRequested) {
+    if (finalState.scanError) {
+      throw finalState.scanError;
+    }
+    if (finalState.pendingOption) {
+      throw attachCLIErrorHelpContext({
+        cli,
+        commandPath,
+        error: CLIError.missingOptionValue({
+          cliName: commandPath.join(" "),
+          optionName: finalState.pendingOption.canonicalName,
+        }),
+      });
+    }
   }
 
   return {
     targetCLI: cli,
     commandPath: [...commandPath],
-    isHelpRequested: false,
+    isHelpRequested: finalState.isHelpRequested,
+    isNoPromptRequested: finalState.isNoPromptRequested,
     rawPositionalArgs: finalState.rawPositionalArgs,
     rawOptionArgs: finalState.rawOptionArgs,
     rawGlobalOptionArgs: finalState.rawGlobalOptionArgs,
@@ -356,8 +280,8 @@ function _finalizeTokenScan(options: {
 
 /**
  * Tokenizes raw CLI arguments against a command tree into positional tokens,
- * canonical local and global options, built-in `-h`/`--help` status, and the
- * matched target command CLI with its full invocation path.
+ * canonical local and global options, built-in `-h`/`--help` and `--no-prompt`
+ * flags, and the matched target command CLI with its full invocation path.
  *
  * Called by `runCLI` before argument allocation, prompting, and validation.
  */
@@ -369,10 +293,12 @@ export function tokenizeCLIInput(
     input,
     commandPath = [cli.getName()],
     inheritedGlobalOptionArgs = {},
+    inheritedNoPrompt = false,
   } = options;
   const initialState: TokenScanState = {
     isAfterDoubleDash: false,
     isHelpRequested: false,
+    isNoPromptRequested: inheritedNoPrompt,
     pendingOption: undefined,
     scanError: undefined,
     rawPositionalArgs: [],

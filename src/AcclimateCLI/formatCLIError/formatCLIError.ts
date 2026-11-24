@@ -8,11 +8,19 @@ import type { CLIError } from "@/CLIError";
  * Called by `executeCLI` so user input failures render cleanly without a raw
  * stack trace.
  */
-export function formatCLIError(error: CLIError): string {
+export function formatCLIError(
+  error: CLIError,
+  options: Readonly<{ color?: boolean }> = {},
+): string {
+  const colorOptions = { color: options.color ?? true };
   const headerLines = [
-    generateTerminalMessage(`|red|${error.message}|reset|`),
+    generateTerminalMessage(`|red|${error.message}|reset|`, {}, colorOptions),
     error.hint !== undefined ?
-      generateTerminalMessage(`  |yellow|⚠️ ${error.hint}|reset|`)
+      generateTerminalMessage(
+        `  |yellow|⚠️ ${error.hint}|reset|`,
+        {},
+        colorOptions,
+      )
     : undefined,
   ].filter((line): line is string => {
     return line !== undefined;

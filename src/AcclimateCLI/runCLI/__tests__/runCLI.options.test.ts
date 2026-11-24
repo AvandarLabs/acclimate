@@ -1,38 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createCLI } from "@/AcclimateCLI/createCLI";
 import { runCLI } from "@/AcclimateCLI/runCLI/runCLI";
 import { generateTerminalMessage } from "@/generateTerminalMessage/generateTerminalMessage";
-import { expectRejectedCLIErrorCode } from "./runCLI.testHelpers";
+import {
+  createMockTerminalSession,
+  expectRejectedCLIErrorCode,
+} from "./runCLI.testHelpers";
 import type { ActionArgs } from "./runCLI.testHelpers";
-
-const readlineMocks = vi.hoisted(() => {
-  const question = vi.fn<() => Promise<string>>();
-  const close = vi.fn();
-  const createInterface = vi.fn(() => {
-    return {
-      question,
-      close,
-    };
-  });
-
-  return { question, close, createInterface };
-});
-
-vi.mock("node:readline/promises", () => {
-  return {
-    createInterface: readlineMocks.createInterface,
-  };
-});
-
-beforeEach(() => {
-  readlineMocks.question.mockReset();
-  readlineMocks.close.mockReset();
-  readlineMocks.createInterface.mockReset();
-  readlineMocks.createInterface.mockReturnValue({
-    question: readlineMocks.question,
-    close: readlineMocks.close,
-  });
-});
 
 describe("runCLI - options", () => {
   it("resolves required and optional options passed via long names and short aliases", async () => {
@@ -195,8 +169,10 @@ describe("runCLI - options", () => {
     expect(action).not.toHaveBeenCalled();
   });
 
-  it("prompts for an option when askIfEmpty is true", async () => {
+  it("prompts for an option on the terminal session when askIfEmpty is true without polluting stdout", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
+    const terminal = createMockTerminalSession();
+    const stdoutChunks: string[] = [];
 
     const cli = createCLI("options-ask-if-empty")
       .addOption({
@@ -208,20 +184,31 @@ describe("runCLI - options", () => {
       })
       .action(action);
 
-    readlineMocks.question.mockResolvedValueOnce("hello");
+    terminal.input.write("hello\n");
 
-    await runCLI({ cli, input: [] });
+    await runCLI({
+      cli,
+      input: [],
+      stdout: {
+        write: (chunk: string) => {
+          stdoutChunks.push(chunk);
+        },
+      },
+      terminal: terminal.session,
+    });
 
-    expect(readlineMocks.question).toHaveBeenCalledWith(
+    expect(terminal.getOutput()).toContain(
       generateTerminalMessage(
         "|bright_cyan|Please enter a value for --note|reset| |gray|(press Enter to leave empty)|reset| ",
       ),
     );
+    expect(stdoutChunks.join("")).toBe("");
     expect(action).toHaveBeenCalledWith({ note: "hello" });
   });
 
   it("uses defaultValue when optional askIfEmpty option is left blank", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
+    const terminal = createMockTerminalSession();
 
     const cli = createCLI("options-ask-if-empty-default")
       .addOption({
@@ -234,11 +221,11 @@ describe("runCLI - options", () => {
       })
       .action(action);
 
-    readlineMocks.question.mockResolvedValueOnce("");
+    terminal.input.write("\n");
 
-    await runCLI({ cli, input: [] });
+    await runCLI({ cli, input: [], terminal: terminal.session });
 
-    expect(readlineMocks.question).toHaveBeenCalledWith(
+    expect(terminal.getOutput()).toContain(
       generateTerminalMessage(
         "|bright_cyan|Please enter a value for --mode|reset| [default: safe] |gray|(press Enter to use default)|reset| ",
       ),
@@ -246,13 +233,10 @@ describe("runCLI - options", () => {
     expect(action).toHaveBeenCalledWith({ mode: "safe" });
   });
 
-  it("re-prompts for required option until a value is provided", async () => {
+  it("re-prompts on the terminal session for required option until a value is provided", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
-    const stdoutSpy = vi
-      .spyOn(process.stdout, "write")
-      .mockImplementation(() => {
-        return true;
-      });
+    const terminal = createMockTerminalSession();
+    const stdoutChunks: string[] = [];
 
     const cli = createCLI("options-ask-if-empty-required")
       .addOption({
@@ -264,25 +248,31 @@ describe("runCLI - options", () => {
       })
       .action(action);
 
-    readlineMocks.question
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce("safe");
+    terminal.input.write("\nsafe\n");
 
-    await runCLI({ cli, input: [] });
+    await runCLI({
+      cli,
+      input: [],
+      stdout: {
+        write: (chunk: string) => {
+          stdoutChunks.push(chunk);
+        },
+      },
+      terminal: terminal.session,
+    });
 
-    expect(readlineMocks.question).toHaveBeenCalledTimes(2);
-    expect(stdoutSpy).toHaveBeenCalledWith(
+    expect(terminal.getOutput()).toContain(
       generateTerminalMessage(
         "|red|This value is required.|reset| Please enter a value.\n",
       ),
     );
+    expect(stdoutChunks.join("")).toBe("");
     expect(action).toHaveBeenCalledWith({ mode: "safe" });
-
-    stdoutSpy.mockRestore();
   });
 
   it("uses defaultValue when required askIfEmpty option is left blank", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
+    const terminal = createMockTerminalSession();
 
     const cli = createCLI("options-ask-if-empty-required-default")
       .addOption({
@@ -295,11 +285,11 @@ describe("runCLI - options", () => {
       })
       .action(action);
 
-    readlineMocks.question.mockResolvedValueOnce("");
+    terminal.input.write("\n");
 
-    await runCLI({ cli, input: [] });
+    await runCLI({ cli, input: [], terminal: terminal.session });
 
-    expect(readlineMocks.question).toHaveBeenCalledWith(
+    expect(terminal.getOutput()).toContain(
       generateTerminalMessage(
         "|bright_cyan|Please enter a value for --mode|reset| [default: safe] |gray|(press Enter to use default)|reset| ",
       ),
@@ -338,6 +328,7 @@ describe("runCLI - global options", () => {
 
   it("prompts for a global option when askIfEmpty is true", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
+    const terminal = createMockTerminalSession();
 
     const cli = createCLI("global-options-ask-if-empty")
       .addGlobalOption({
@@ -349,11 +340,11 @@ describe("runCLI - global options", () => {
       })
       .action(action);
 
-    readlineMocks.question.mockResolvedValueOnce("abc123");
+    terminal.input.write("abc123\n");
 
-    await runCLI({ cli, input: [] });
+    await runCLI({ cli, input: [], terminal: terminal.session });
 
-    expect(readlineMocks.question).toHaveBeenCalledWith(
+    expect(terminal.getOutput()).toContain(
       generateTerminalMessage(
         "|bright_cyan|Please enter a value for --token|reset| |gray|(press Enter to leave empty)|reset| ",
       ),

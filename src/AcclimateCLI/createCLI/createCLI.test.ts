@@ -83,6 +83,40 @@ describe("CLIError", () => {
     expect(original.hint).toBeUndefined();
     expect(original.usage).toBeUndefined();
   });
+
+  it("creates prompt_cancelled and interactive_input_unavailable CLIErrors", () => {
+    const cancelled = CLIError.promptCancelled({ cliName: "avandar-lint" });
+    expect(cancelled.code).toBe("prompt_cancelled");
+    expect(cancelled.message).toContain("Cancelled");
+
+    const unavailable = CLIError.interactiveInputUnavailable({
+      cliName: "avandar-lint",
+      message: "Interactive prompt requires a TTY.",
+      hint: "Pass --format <value> instead.",
+    });
+    expect(unavailable.code).toBe("interactive_input_unavailable");
+    expect(unavailable.hint).toBe("Pass --format <value> instead.");
+  });
+
+  it("preserves explicit recovery hints on missing required option and positional errors", () => {
+    const optionError = CLIError.missingRequiredOption({
+      cliName: "demo",
+      optionName: "--format",
+      hint: "Pass --format <value> (for example: demo --format <value>).",
+    });
+    expect(optionError.hint).toBe(
+      "Pass --format <value> (for example: demo --format <value>).",
+    );
+
+    const positionalError = CLIError.missingRequiredPositionalArg({
+      cliName: "demo",
+      positionalArgName: "target",
+      hint: "Pass <target> (for example: demo <target>).",
+    });
+    expect(positionalError.hint).toBe(
+      "Pass <target> (for example: demo <target>).",
+    );
+  });
 });
 
 describe("AcclimateCLI.addPositionalArg", () => {

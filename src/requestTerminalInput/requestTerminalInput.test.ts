@@ -1,140 +1,234 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PassThrough } from "node:stream";
+import { describe, expect, it, vi } from "vitest";
 import { generateTerminalMessage } from "@/generateTerminalMessage";
 import { requestTerminalInput } from "./requestTerminalInput";
+import type { TerminalSession } from "@/terminalSession/terminalSession.types";
 
-type ReadlineMocks = {
-  question: ReturnType<typeof vi.fn>;
-  close: ReturnType<typeof vi.fn>;
-  createInterface: ReturnType<typeof vi.fn>;
-};
+function _createTestTerminal(
+  options: {
+    isRawModeSupported?: boolean;
+    isColorEnabled?: boolean;
+  } = {},
+) {
+  const input = new PassThrough();
+  const outputChunks: string[] = [];
+  const rawModeCalls: boolean[] = [];
 
-const readlineMocks: ReadlineMocks = vi.hoisted(() => {
-  const question = vi.fn<() => Promise<string>>();
-  const close = vi.fn();
-  const createInterface = vi.fn(() => {
-    return { question, close };
+  const mockInput = Object.assign(input, {
+    isTTY: options.isRawModeSupported ?? false,
+    isRaw: false,
+    setRawMode:
+      options.isRawModeSupported ?
+        (mode: boolean) => {
+          rawModeCalls.push(mode);
+          mockInput.isRaw = mode;
+        }
+      : undefined,
   });
 
-  return { question, close, createInterface };
-});
-
-vi.mock("node:readline/promises", () => {
-  return {
-    createInterface: readlineMocks.createInterface,
+  const session: TerminalSession = {
+    input: mockInput,
+    output: {
+      isTTY: options.isColorEnabled ?? true,
+      write: (chunk: string) => {
+        outputChunks.push(chunk);
+        return true;
+      },
+    },
+    isColorEnabled: options.isColorEnabled ?? true,
+    isRawModeSupported: options.isRawModeSupported ?? false,
+    close: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   };
-});
 
-beforeEach(() => {
-  readlineMocks.question.mockReset();
-  readlineMocks.close.mockReset();
-  readlineMocks.createInterface.mockReset();
-  readlineMocks.createInterface.mockReturnValue({
-    question: readlineMocks.question,
-    close: readlineMocks.close,
-  });
-});
+  return {
+    input: mockInput,
+    session,
+    rawModeCalls,
+    getOutput: () => {
+      return outputChunks.join("");
+    },
+  };
+}
 
 describe("requestTerminalInput", () => {
-  it("adds the optional notice and interpolates params", async () => {
-    readlineMocks.question.mockResolvedValueOnce("alpha");
+  it("writes interpolated prompt and optional notice to the terminal session without touching stdout", async () => {
+    const stdoutSpy = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => {
+        return true;
+      });
+    const terminal = _createTestTerminal();
+    terminal.input.write("alpha\n");
 
     const result = await requestTerminalInput({
       message: "|bright_cyan|Target for $env$|reset|",
       params: { env: "dev" },
       responseOptions: { required: false },
+      terminal: terminal.session,
     });
 
-    expect(readlineMocks.question).toHaveBeenCalledWith(
+    expect(result).toBe("alpha");
+    expect(terminal.getOutput()).toContain(
       generateTerminalMessage(
         "|bright_cyan|Target for $env$|reset| |gray|(press Enter to leave empty)|reset| ",
         { env: "dev" },
       ),
     );
-    expect(result).toBe("alpha");
+    expect(stdoutSpy).not.toHaveBeenCalled();
+
+    stdoutSpy.mockRestore();
   });
 
-  it("returns undefined when optional input is empty", async () => {
-    readlineMocks.question.mockResolvedValueOnce("");
+  it("returns undefined when optional input is blank and stringified defaultValue when provided", async () => {
+    const blankTerminal = _createTestTerminal();
+    blankTerminal.input.write("\n");
 
-    const result = await requestTerminalInput({
+    const optionalResult = await requestTerminalInput({
       message: "Provide a note",
       params: {},
       responseOptions: { required: false },
+      terminal: blankTerminal.session,
     });
+    expect(optionalResult).toBeUndefined();
 
-    expect(result).toBeUndefined();
-  });
+    const defaultTerminal = _createTestTerminal();
+    defaultTerminal.input.write("\n");
 
-  it("adds a boolean hint to the prompt", async () => {
-    readlineMocks.question.mockResolvedValueOnce("y");
-
-    await requestTerminalInput({
-      message: "Enable feature",
+    const defaultResult = await requestTerminalInput({
+      message: "Retry count",
       params: {},
-      responseOptions: { required: false, type: "boolean" },
+      responseOptions: { required: false, type: "number", defaultValue: 3 },
+      terminal: defaultTerminal.session,
     });
-
-    expect(readlineMocks.question).toHaveBeenCalledWith(
-      generateTerminalMessage(
-        "Enable feature |reset|(y/n) |gray|(press Enter to leave empty)|reset| ",
-        {},
-      ),
-    );
+    expect(defaultResult).toBe("3");
   });
 
-  it("re-prompts when a boolean response is invalid", async () => {
+  it("re-prompts on session output when required text or numeric input is invalid", async () => {
     const stdoutSpy = vi
       .spyOn(process.stdout, "write")
       .mockImplementation(() => {
         return true;
       });
+    const requiredTerminal = _createTestTerminal();
+    requiredTerminal.input.write("\nvalue\n");
 
-    readlineMocks.question
-      .mockResolvedValueOnce("maybe")
-      .mockResolvedValueOnce("n");
-
-    const result = await requestTerminalInput({
-      message: "Enable feature?",
-      params: {},
-      responseOptions: { required: false, type: "boolean" },
-    });
-
-    expect(readlineMocks.question).toHaveBeenCalledTimes(2);
-    expect(stdoutSpy).toHaveBeenCalledWith(
-      generateTerminalMessage(
-        "|red|That was not a valid response.|reset| Please enter y or n.\n",
-      ),
-    );
-    expect(result).toBe("false");
-
-    stdoutSpy.mockRestore();
-  });
-
-  it("re-prompts until required input is provided", async () => {
-    const stdoutSpy = vi
-      .spyOn(process.stdout, "write")
-      .mockImplementation(() => {
-        return true;
-      });
-
-    readlineMocks.question
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce("value");
-
-    const result = await requestTerminalInput({
+    const requiredResult = await requestTerminalInput({
       message: "Enter value",
       params: {},
       responseOptions: { required: true },
+      terminal: requiredTerminal.session,
     });
 
-    expect(readlineMocks.question).toHaveBeenCalledTimes(2);
-    expect(stdoutSpy).toHaveBeenCalledWith(
-      generateTerminalMessage(
-        "|red|This value is required.|reset| Please enter a value.\n",
-      ),
-    );
-    expect(result).toBe("value");
+    expect(requiredResult).toBe("value");
+    expect(requiredTerminal.getOutput()).toContain("This value is required.");
+
+    const numericTerminal = _createTestTerminal();
+    numericTerminal.input.write("not-a-number\n42\n");
+
+    const numericResult = await requestTerminalInput({
+      message: "Enter port",
+      params: {},
+      responseOptions: { required: true, type: "number" },
+      terminal: numericTerminal.session,
+    });
+
+    expect(numericResult).toBe("42");
+    expect(numericTerminal.getOutput()).toContain("not a valid number");
+    expect(stdoutSpy).not.toHaveBeenCalled();
 
     stdoutSpy.mockRestore();
+  });
+
+  it("uses the Yes/No choice menu for boolean prompts on raw-capable TTYs and validates y/n on non-raw sessions", async () => {
+    const rawTerminal = _createTestTerminal({ isRawModeSupported: true });
+    const rawPromise = requestTerminalInput({
+      message: "Enable feature?",
+      params: {},
+      responseOptions: { required: false, type: "boolean", defaultValue: true },
+      terminal: rawTerminal.session,
+    });
+
+    rawTerminal.input.write("j\r");
+    await expect(rawPromise).resolves.toBe("false");
+    expect(rawTerminal.rawModeCalls).toEqual([true, false]);
+
+    const plainTerminal = _createTestTerminal({
+      isRawModeSupported: false,
+      isColorEnabled: false,
+    });
+    plainTerminal.input.write("maybe\nn\n");
+
+    const plainResult = await requestTerminalInput({
+      message: "Enable feature?",
+      params: {},
+      responseOptions: { required: false, type: "boolean" },
+      terminal: plainTerminal.session,
+    });
+
+    expect(plainResult).toBe("false");
+    expect(plainTerminal.getOutput()).toContain("Please enter y or n.");
+  });
+
+  it("delegates choices prompts to the interactive choice menu and returns the chosen string", async () => {
+    const rawTerminal = _createTestTerminal({ isRawModeSupported: true });
+    const choicePromise = requestTerminalInput({
+      message: "Choose format",
+      params: {},
+      responseOptions: {
+        required: true,
+        type: "string",
+        choices: ["stylish", "agent", "json"],
+        defaultValue: "stylish",
+      },
+      terminal: rawTerminal.session,
+    });
+
+    rawTerminal.input.write("G\r");
+    await expect(choicePromise).resolves.toBe("json");
+  });
+
+  it("rejects with prompt_cancelled on EOF without hanging", async () => {
+    const terminal = _createTestTerminal();
+    terminal.input.end();
+
+    await expect(
+      requestTerminalInput({
+        message: "Enter token",
+        params: {},
+        responseOptions: { required: true },
+        terminal: terminal.session,
+      }),
+    ).rejects.toMatchObject({ code: "prompt_cancelled" });
+  });
+
+  it("uses defaults for optional prompts and fails fast for required prompts when unattended", async () => {
+    const optionalWithDefault = await requestTerminalInput({
+      message: "Region",
+      params: {},
+      responseOptions: {
+        required: false,
+        type: "string",
+        defaultValue: "us-east-1",
+      },
+      interactive: false,
+    });
+    expect(optionalWithDefault).toBe("us-east-1");
+
+    const optionalWithoutDefault = await requestTerminalInput({
+      message: "Note",
+      params: {},
+      responseOptions: { required: false },
+      interactive: false,
+    });
+    expect(optionalWithoutDefault).toBeUndefined();
+
+    await expect(
+      requestTerminalInput({
+        message: "API token",
+        params: {},
+        responseOptions: { required: true },
+        interactive: false,
+      }),
+    ).rejects.toMatchObject({ code: "interactive_input_unavailable" });
   });
 });

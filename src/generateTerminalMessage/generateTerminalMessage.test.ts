@@ -27,9 +27,9 @@ describe("generateTerminalMessage", () => {
   });
 
   it("replaces tokens with empty strings when params are undefined", () => {
-    expect(generateTerminalMessage("Target: $target$", { target: undefined })).toBe(
-      "Target: ",
-    );
+    expect(
+      generateTerminalMessage("Target: $target$", { target: undefined }),
+    ).toBe("Target: ");
   });
 
   it("interpolates number, boolean, and null param values", () => {
@@ -48,5 +48,21 @@ describe("generateTerminalMessage", () => {
         { retries: 3, enabled: true, label: null, note: undefined },
       ),
     ).toBe("Retries: 3 Enabled: true Label: null Note: ");
+  });
+
+  it("applies the bold style token alongside bright colors", () => {
+    expect(
+      generateTerminalMessage("|bold||bright_green|❯ coverage|reset|", {}),
+    ).toBe("\x1b[1m\x1b[92m❯ coverage\x1b[0m");
+  });
+
+  it("strips known style and color tokens without ANSI escapes when color is false", () => {
+    expect(
+      generateTerminalMessage(
+        "|bold||bright_green|❯ $name$|reset| |nope|",
+        { name: "coverage" },
+        { color: false },
+      ),
+    ).toBe("❯ coverage |nope|");
   });
 });

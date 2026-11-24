@@ -1,370 +1,239 @@
-import { camelCase } from "change-case";
-import { match } from "ts-pattern";
 import { generateHelpText } from "@/AcclimateCLI/generateHelpText/generateHelpText";
 import { CLIError } from "@/CLIError";
-import { requestTerminalInput } from "@/requestTerminalInput";
+import { requestChoiceMenu } from "@/requestChoiceMenu/requestChoiceMenu";
+import { openTerminalSession } from "@/terminalSession/openTerminalSession/openTerminalSession";
 import { attachCLIErrorHelpContext } from "./attachCLIErrorHelpContext";
-import { parseCLIParamValue } from "./parseCLIParamValue/parseCLIParamValue";
+import { parseTargetCLIArgs } from "./parseTargetCLIArgs";
+import { mergeParentGlobalOptions } from "./tokenizeCLIInput/cliOptionLookupHelpers";
 import { tokenizeCLIInput } from "./tokenizeCLIInput/tokenizeCLIInput";
 import type {
   AnyCLI,
+  CLICommandName,
   CLIFullOptionName,
   CLIOptionParam,
   CLIParamDataType,
-  CLIParamScalarValue,
   CLIPositionalParam,
-  CLIScalarPositionalParam,
-  CLIVariadicPositionalParam,
-  OutputStream,
 } from "@/AcclimateCLI/AcclimateCLI.types";
+import type {
+  TerminalInputStream,
+  TerminalOutputStream,
+  TerminalSession,
+} from "@/terminalSession/terminalSession.types";
 
-type PromptableParam = {
-  name: string;
-  description?: string;
-  type: "string" | "number" | "boolean";
-  required: boolean;
-  askIfEmpty?: boolean | { message: string };
-  defaultValue?: CLIParamScalarValue;
+/**
+ * Options accepted by `runCLI` for executing a CLI against raw `argv` tokens.
+ */
+export type RunCLIOptions = {
+  input: readonly string[];
+  cli: AnyCLI;
+  stdout?: TerminalOutputStream;
+  stderr?: TerminalOutputStream;
+  stdin?: TerminalInputStream;
+  env?: Readonly<Record<string, string | undefined>>;
+  terminal?: TerminalSession;
+  interactive?: boolean;
+  openTty?: () => Promise<TerminalSession | undefined>;
 };
 
 type RuntimeTargetCLIState = {
   positionalArgs: readonly CLIPositionalParam[];
   optionArgs: Record<CLIFullOptionName, CLIOptionParam>;
   globalOptionArgs: Record<CLIFullOptionName, CLIOptionParam>;
+  commands: Record<CLICommandName, AnyCLI>;
   action?: (args: Record<string, CLIParamDataType>) => void | Promise<void>;
 };
 
-async function _askForValue(
-  argConfig: Readonly<PromptableParam>,
-): Promise<string | undefined> {
-  const description =
-    argConfig.description ? ` (${argConfig.description})` : "";
-  const baseMessage =
-    typeof argConfig.askIfEmpty === "object" ?
-      argConfig.askIfEmpty.message
-    : `Please enter a value for ${argConfig.name}${description}`;
-  return requestTerminalInput({
-    message: `|bright_cyan|${baseMessage}|reset|`,
-    params: {},
-    responseOptions: {
-      required: argConfig.required,
-      type: argConfig.type,
-      defaultValue: argConfig.defaultValue,
-    },
-  });
-}
+type LazyTerminalController = {
+  getSession: () => Promise<TerminalSession | undefined>;
+  close: () => Promise<void>;
+};
 
-function _narrowParsedArray(options: {
-  paramType: CLIVariadicPositionalParam["type"];
-  parsedValues: ReadonlyArray<CLIParamScalarValue | undefined>;
-}): string[] | number[] | boolean[] {
-  return match(options.paramType)
-    .with("string", () => {
-      return options.parsedValues.filter((value): value is string => {
-        return typeof value === "string";
-      });
-    })
-    .with("number", () => {
-      return options.parsedValues.filter((value): value is number => {
-        return typeof value === "number";
-      });
-    })
-    .with("boolean", () => {
-      return options.parsedValues.filter((value): value is boolean => {
-        return typeof value === "boolean";
-      });
-    })
-    .exhaustive();
-}
-
-function _parseVariadicValues(options: {
-  cliName: string;
-  rawValues: readonly string[] | undefined;
-  defaultValues:
-    | readonly string[]
-    | readonly number[]
-    | readonly boolean[]
-    | undefined;
-  argConfig: CLIVariadicPositionalParam;
-}): string[] | number[] | boolean[] {
-  const { cliName, rawValues, defaultValues, argConfig } = options;
-  const parsedValues =
-    rawValues !== undefined ?
-      rawValues.map((rawValue) => {
-        return parseCLIParamValue({
-          cliName,
-          inputValue: rawValue,
-          defaultValue: undefined,
-          paramConfig: argConfig,
-        });
-      })
-    : (defaultValues ?? []).map((defaultItem) => {
-        return parseCLIParamValue({
-          cliName,
-          inputValue: undefined,
-          defaultValue: defaultItem,
-          paramConfig: argConfig,
-        });
-      });
-
-  return _narrowParsedArray({ paramType: argConfig.type, parsedValues });
-}
-
-async function _promptVariadicPositionalArg(options: {
-  cliName: string;
-  argConfig: CLIVariadicPositionalParam;
-}): Promise<string[] | number[] | boolean[] | undefined> {
-  const { cliName, argConfig } = options;
-  const hasDefaults = argConfig.defaultValue !== undefined;
-  const promptedValue = await _askForValue({
-    name: argConfig.name,
-    description: argConfig.description,
-    type: argConfig.type,
-    required: argConfig.required && !hasDefaults,
-    askIfEmpty: argConfig.askIfEmpty,
-    defaultValue: undefined,
-  });
-
-  if (promptedValue !== undefined) {
-    return _parseVariadicValues({
-      cliName,
-      rawValues: [promptedValue],
-      defaultValues: undefined,
-      argConfig,
-    });
-  }
-  if (hasDefaults) {
-    return _parseVariadicValues({
-      cliName,
-      rawValues: undefined,
-      defaultValues: argConfig.defaultValue,
-      argConfig,
-    });
-  }
-  return undefined;
-}
-
-async function _parseVariadicPositionalArg(options: {
-  cliName: string;
-  rawValues: readonly string[];
-  argConfig: CLIVariadicPositionalParam;
-}): Promise<string[] | number[] | boolean[]> {
-  const { cliName, rawValues, argConfig } = options;
-  if (rawValues.length > 0) {
-    return _parseVariadicValues({
-      cliName,
-      rawValues,
-      defaultValues: undefined,
-      argConfig,
-    });
-  }
-
-  if (argConfig.askIfEmpty) {
-    const promptedResult = await _promptVariadicPositionalArg({
-      cliName,
-      argConfig,
-    });
-    if (promptedResult !== undefined) {
-      return promptedResult;
-    }
-  }
-
-  if (argConfig.required) {
-    throw CLIError.missingRequiredPositionalArg({
-      cliName,
-      positionalArgName: argConfig.name,
-    });
-  }
-
-  return _parseVariadicValues({
-    cliName,
-    rawValues: undefined,
-    defaultValues: argConfig.defaultValue,
-    argConfig,
-  });
-}
-
-async function _parseScalarPositionalArg(options: {
-  cliName: string;
-  rawValue: string | undefined;
-  argConfig: CLIScalarPositionalParam;
-}): Promise<CLIParamScalarValue | undefined> {
-  const { cliName, argConfig } = options;
-  const effectiveRawValue =
-    argConfig.askIfEmpty && options.rawValue === undefined ?
-      await _askForValue(argConfig)
-    : options.rawValue;
-
-  if (argConfig.required && effectiveRawValue === undefined) {
-    throw CLIError.missingRequiredPositionalArg({
-      cliName,
-      positionalArgName: argConfig.name,
-    });
-  }
-
-  return parseCLIParamValue({
-    cliName,
-    inputValue: effectiveRawValue,
-    defaultValue: argConfig.defaultValue,
-    paramConfig: argConfig,
-  });
-}
-
-async function _parsePositionalArgs(options: {
-  cliName: string;
-  positionalArgs: readonly CLIPositionalParam[];
-  rawPositionalArgs: readonly string[];
-}): Promise<Record<string, CLIParamDataType>> {
-  const { cliName, positionalArgs, rawPositionalArgs } = options;
-  const hasVariadicArg = positionalArgs.some((argConfig) => {
-    return argConfig.variadic === true;
-  });
-
-  if (!hasVariadicArg && rawPositionalArgs.length > positionalArgs.length) {
-    throw CLIError.tooManyPositionalArgs({
-      cliName,
-      count: rawPositionalArgs.length,
-    });
-  }
-
-  const entries: Array<[string, CLIParamDataType]> = [];
-  for (const [idx, argConfig] of positionalArgs.entries()) {
-    const parsedValue =
-      argConfig.variadic === true ?
-        await _parseVariadicPositionalArg({
-          cliName,
-          rawValues: rawPositionalArgs.slice(idx),
-          argConfig,
-        })
-      : await _parseScalarPositionalArg({
-          cliName,
-          rawValue: rawPositionalArgs[idx],
-          argConfig,
-        });
-    entries.push([argConfig.name, parsedValue]);
-  }
-  return Object.fromEntries(entries);
-}
-
-async function _parseOptionGroup(options: {
-  cliName: string;
-  optionDefs: readonly CLIOptionParam[];
-  rawOptions: Readonly<Record<CLIFullOptionName, string>>;
-}): Promise<Record<string, CLIParamDataType>> {
-  const { cliName, optionDefs, rawOptions } = options;
-  const entries: Array<[string, CLIParamDataType]> = [];
-
-  for (const argConfig of optionDefs) {
-    const rawValue = rawOptions[argConfig.name];
-    const effectiveRawValue =
-      argConfig.askIfEmpty && rawValue === undefined ?
-        await _askForValue(argConfig)
-      : rawValue;
-
-    if (argConfig.required && effectiveRawValue === undefined) {
-      throw CLIError.missingRequiredOption({
-        cliName,
-        optionName: argConfig.name,
-      });
-    }
-
-    const parsedValue = parseCLIParamValue({
-      cliName,
-      inputValue: effectiveRawValue,
-      defaultValue: argConfig.defaultValue,
-      paramConfig: argConfig,
-    });
-    entries.push([camelCase(argConfig.name), parsedValue]);
-  }
-
-  return Object.fromEntries(entries);
-}
-
-type ParseTargetArgsOptions = {
-  cliName: string;
-  targetState: Readonly<RuntimeTargetCLIState>;
+type TargetExecutionContext = {
+  targetCLI: AnyCLI;
+  commandPath: readonly string[];
   rawPositionalArgs: readonly string[];
   rawOptionArgs: Readonly<Record<CLIFullOptionName, string>>;
   rawGlobalOptionArgs: Readonly<Record<CLIFullOptionName, string>>;
 };
 
-async function _parseTargetArgs(
-  options: Readonly<ParseTargetArgsOptions>,
-): Promise<Record<string, CLIParamDataType>> {
-  const { cliName, targetState } = options;
-  const parsedPositionalArgs = await _parsePositionalArgs({
-    cliName,
-    positionalArgs: targetState.positionalArgs,
-    rawPositionalArgs: options.rawPositionalArgs,
-  });
-  const parsedOptionArgs = await _parseOptionGroup({
-    cliName,
-    optionDefs: Object.values(targetState.optionArgs),
-    rawOptions: options.rawOptionArgs,
-  });
-  const parsedGlobalOptionArgs = await _parseOptionGroup({
-    cliName,
-    optionDefs: Object.values(targetState.globalOptionArgs),
-    rawOptions: options.rawGlobalOptionArgs,
-  });
+function _createLazyTerminalController(options: {
+  runOptions: Readonly<RunCLIOptions>;
+  isNoPromptRequested: boolean;
+}): LazyTerminalController {
+  const { runOptions, isNoPromptRequested } = options;
+  const effectiveInteractive =
+    runOptions.interactive === false || isNoPromptRequested ?
+      false
+    : runOptions.interactive;
+
+  let cachedSession: TerminalSession | undefined;
+  let didAttemptOpen = false;
 
   return {
-    ...parsedPositionalArgs,
-    ...parsedOptionArgs,
-    ...parsedGlobalOptionArgs,
+    getSession: async () => {
+      if (!didAttemptOpen) {
+        didAttemptOpen = true;
+        cachedSession = await openTerminalSession({
+          session: runOptions.terminal,
+          interactive: effectiveInteractive,
+          stdin: runOptions.stdin,
+          stdout: runOptions.stdout,
+          stderr: runOptions.stderr,
+          env: runOptions.env,
+          openTty: runOptions.openTty,
+        });
+      }
+      return cachedSession;
+    },
+    close: async () => {
+      if (cachedSession) {
+        const sessionToClose = cachedSession;
+        cachedSession = undefined;
+        await sessionToClose.close();
+      }
+    },
   };
+}
+
+function _getSortedCommandChoices(
+  commands: Readonly<Record<CLICommandName, AnyCLI>>,
+): Array<{ value: string; label: string; description: string | undefined }> {
+  return Object.entries(commands)
+    .sort(([firstName], [secondName]) => {
+      return firstName.localeCompare(secondName);
+    })
+    .map(([commandName, commandCLI]) => {
+      return {
+        value: commandName,
+        label: commandName,
+        description: commandCLI.state.description,
+      };
+    });
+}
+
+async function _selectBareSubcommand(options: {
+  context: Readonly<TargetExecutionContext>;
+  getTerminalSession: () => Promise<TerminalSession | undefined>;
+}): Promise<TargetExecutionContext> {
+  const { context, getTerminalSession } = options;
+  const targetState = context.targetCLI.state as RuntimeTargetCLIState;
+  const commandChoices = _getSortedCommandChoices(targetState.commands);
+  const canOpenMenu =
+    targetState.action === undefined &&
+    commandChoices.length > 0 &&
+    context.rawPositionalArgs.length === 0 &&
+    Object.keys(context.rawOptionArgs).length === 0;
+  if (!canOpenMenu) {
+    return context;
+  }
+
+  const terminalSession = await getTerminalSession();
+  if (!terminalSession) {
+    return context;
+  }
+
+  const cliName = context.commandPath.join(" ");
+  const chosenCommandName = await requestChoiceMenu({
+    message: `Select a command for ${cliName}`,
+    choices: commandChoices,
+    terminal: terminalSession,
+    cliName,
+  });
+
+  return _selectBareSubcommand({
+    context: {
+      targetCLI: mergeParentGlobalOptions({
+        parentCLI: context.targetCLI,
+        commandCLI: targetState.commands[chosenCommandName]!,
+      }),
+      commandPath: [...context.commandPath, chosenCommandName],
+      rawPositionalArgs: [],
+      rawOptionArgs: {},
+      rawGlobalOptionArgs: context.rawGlobalOptionArgs,
+    },
+    getTerminalSession,
+  });
+}
+
+async function _collectTargetExecution(options: {
+  initialContext: Readonly<TargetExecutionContext>;
+  terminalController: Readonly<LazyTerminalController>;
+}): Promise<{
+  finalContext: TargetExecutionContext;
+  parsedArgs: Record<string, CLIParamDataType>;
+}> {
+  const { terminalController } = options;
+  let finalContext: TargetExecutionContext = options.initialContext;
+
+  try {
+    finalContext = await _selectBareSubcommand({
+      context: options.initialContext,
+      getTerminalSession: terminalController.getSession,
+    });
+    const targetState = finalContext.targetCLI.state as RuntimeTargetCLIState;
+    const parsedArgs = await parseTargetCLIArgs({
+      cliName: finalContext.commandPath.join(" "),
+      positionalArgs: targetState.positionalArgs,
+      optionArgs: targetState.optionArgs,
+      globalOptionArgs: targetState.globalOptionArgs,
+      rawPositionalArgs: finalContext.rawPositionalArgs,
+      rawOptionArgs: finalContext.rawOptionArgs,
+      rawGlobalOptionArgs: finalContext.rawGlobalOptionArgs,
+      getTerminalSession: terminalController.getSession,
+    });
+    return { finalContext, parsedArgs };
+  } catch (error: unknown) {
+    if (error instanceof CLIError && error.usage === undefined) {
+      throw attachCLIErrorHelpContext({
+        cli: finalContext.targetCLI,
+        commandPath: finalContext.commandPath,
+        error,
+      });
+    }
+    throw error;
+  } finally {
+    await terminalController.close();
+  }
 }
 
 /**
  * Runs a CLI against raw `argv` tokens, writing built-in `-h`/`--help` or
- * actionless usage to `stdout` and awaiting the matched command's action.
+ * unattended actionless usage to `stdout`, driving interactive choice menus
+ * and prompts on `/dev/tty`, and awaiting the matched command's action.
  *
  * Called by `executeCLI` for process-boundary execution and by programmatic
  * callers that want structured `CLIError` rejections.
  */
-export async function runCLI(options: {
-  input: readonly string[];
-  cli: AnyCLI;
-  stdout?: OutputStream;
-}): Promise<void> {
+export async function runCLI(options: Readonly<RunCLIOptions>): Promise<void> {
   const stdout = options.stdout ?? process.stdout;
-  const {
-    targetCLI,
-    commandPath,
-    isHelpRequested,
-    rawPositionalArgs,
-    rawOptionArgs,
-    rawGlobalOptionArgs,
-  } = tokenizeCLIInput({
+  const tokenized = tokenizeCLIInput({
     cli: options.cli,
     input: options.input,
   });
 
-  if (isHelpRequested) {
-    stdout.write(`${generateHelpText(targetCLI, { commandPath })}\n`);
+  if (tokenized.isHelpRequested) {
+    stdout.write(
+      `${generateHelpText(tokenized.targetCLI, { commandPath: tokenized.commandPath })}\n`,
+    );
     return;
   }
 
-  // AnyCLI erases builder generics; narrow once at the execution boundary.
-  const targetState = targetCLI.state as RuntimeTargetCLIState;
-
-  const parsedArgs = await _parseTargetArgs({
-    cliName: commandPath.join(" "),
-    targetState,
-    rawPositionalArgs,
-    rawOptionArgs,
-    rawGlobalOptionArgs,
-  }).catch((error: unknown) => {
-    if (error instanceof CLIError && error.usage === undefined) {
-      throw attachCLIErrorHelpContext({ cli: targetCLI, commandPath, error });
-    }
-    throw error;
+  const terminalController = _createLazyTerminalController({
+    runOptions: options,
+    isNoPromptRequested: tokenized.isNoPromptRequested,
+  });
+  const { finalContext, parsedArgs } = await _collectTargetExecution({
+    initialContext: tokenized,
+    terminalController,
   });
 
-  if (targetState.action) {
-    await targetState.action(parsedArgs);
+  const matchedState = finalContext.targetCLI.state as RuntimeTargetCLIState;
+  if (matchedState.action) {
+    await matchedState.action(parsedArgs);
     return;
   }
 
-  stdout.write(`${generateHelpText(targetCLI, { commandPath })}\n`);
+  stdout.write(
+    `${generateHelpText(finalContext.targetCLI, { commandPath: finalContext.commandPath })}\n`,
+  );
 }

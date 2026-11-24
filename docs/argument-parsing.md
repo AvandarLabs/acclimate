@@ -87,11 +87,26 @@ element of a variadic positional argument:
 3. **Validator:** Runs `param.validator` on each parsed value (or default
    element), throwing `CLIError` (`invalid_cli_param_value`) on `false` or a
    custom error string.
-4. **Interactive prompts (`askIfEmpty`):** When a parameter receives no CLI
-   input and `askIfEmpty` is set, Acclimate prompts via `requestTerminalInput`.
-   For a variadic positional argument, a non-empty prompt answer becomes a
-   single-element array; an empty answer falls back to `defaultValue` when
-   configured or `[]` when optional.
+4. **Interactive prompts (`askIfEmpty`) and unattended mode:** See
+   [`docs/interactive-prompts.md`](interactive-prompts.md) for full details.
+   - When an interactive controlling terminal (`/dev/tty`) is available and
+     prompts are enabled, Acclimate prompts via `requestChoiceMenu` (for
+     `choices` and raw-TTY `boolean` parameters) or `requestTerminalInput` (for
+     free-text `string`/`number` parameters) without touching `stdout` or
+     consuming piped `stdin`.
+   - When no TTY is attached, `CI` is enabled, or `--no-prompt` is supplied,
+     missing required `askIfEmpty` parameters fail promptly with an actionable
+     `CLIError` naming the flag or argument and example invocation, while
+     optional parameters fall back to `defaultValue` (or `[]` / `undefined`).
+   - Built-in `--no-prompt` (and `--no-prompt=true` / `--no-prompt=false`) is
+     recognized before `--` at any command level even when not declared on the
+     CLI, propagating into sub-commands. If a CLI explicitly declares
+     `--no-prompt`, Acclimate preserves the parsed `noPrompt` argument value
+     while also honoring it to disable prompting.
+   - Running an actionless parent command with sub-commands bare in an
+     interactive terminal opens a sub-command choice menu and recurses into the
+     chosen command (carrying forward parent global options); in unattended
+     mode, it writes help to `stdout`.
 
 ## Built-In Help (`-h` / `--help`)
 
@@ -134,11 +149,14 @@ sub-command:
     `too_many_positional_args`, `missing_required_positional_arg`,
     `missing_required_option`, `missing_option_value`, `unknown_option`,
     `invalid_cli_param_value`, `unknown_command`, `already_run`,
-    `unknown_error`).
+    `prompt_cancelled`, `interactive_input_unavailable`, `unknown_error`).
   - `cliName`, optional `commandPath`, optional `hint` (`Run <cmd> --help to
-see available options and usage.`), and optional `usage`.
+see available options and usage.`, or a flag/invocation hint on unattended
+    required prompt failures), and optional `usage`.
 - `executeCLI` (used by `Acclimate.run(cli)` and exported for programmatic
   testing/embedding) writes `CLIError` output formatted by `formatCLIError`
-  (red error line, indented yellow `⚠️` recovery hint, and full command usage)
-  to `stderr`, leaves `stdout` empty, omits raw stack traces for CLI input
-  errors, and sets `process.exitCode = 1` without calling `process.exit()`.
+  (red error line, indented yellow `⚠️` recovery hint, and full command usage,
+  automatically stripping ANSI color on redirected `stderr`, `NO_COLOR`, or
+  `TERM=dumb`) to `stderr`, leaves `stdout` empty, omits raw stack traces for
+  CLI input errors, and sets `process.exitCode` to `130` for `prompt_cancelled`
+  or `1` for other errors without calling `process.exit()`.

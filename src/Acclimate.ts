@@ -1,8 +1,19 @@
 import { createCLI } from "./AcclimateCLI";
 import { executeCLI } from "./AcclimateCLI/executeCLI/executeCLI";
 import { generateTerminalMessage } from "./generateTerminalMessage";
+import { requestChoiceMenu } from "./requestChoiceMenu/requestChoiceMenu";
 import { requestTerminalInput } from "./requestTerminalInput";
+import { isColorEnabledForStream } from "./terminalSession/isColorEnabledForStream/isColorEnabledForStream";
 import type { AnyCLI, IAcclimateCLI } from "./AcclimateCLI/AcclimateCLI.types";
+import type { ChoiceMenuOptions } from "./requestChoiceMenu/requestChoiceMenu.types";
+import type { RequestTerminalInputOptions } from "./requestTerminalInput/requestTerminalInput";
+import type { TerminalOutputStream } from "./terminalSession/terminalSession.types";
+
+type AcclimateLogOptions = {
+  stream?: TerminalOutputStream;
+  color?: boolean;
+  env?: Readonly<Record<string, string | undefined>>;
+};
 
 type Acclimate = {
   /**
@@ -14,88 +25,84 @@ type Acclimate = {
   createCLI: (name: string) => IAcclimateCLI;
 
   /**
-   * Run a CLI instance.
-   *
-   * It can only be run once. Calling any other methods after `.run()` will
-   * throw an error.
+   * Run a CLI instance against `process.argv.slice(2)`, separating `stdout`
+   * data from `stderr` diagnostics and setting `process.exitCode` on failure.
    *
    * @param cli - The CLI instance to run.
    */
   run: (cli: AnyCLI) => void;
 
   /**
-   * Outputs a message with `console.log`.
-   * Supports interpolation using `$varName$` as tokens.
-   *
-   * Colors can be changed within a message `|<COLOR_NAME>|` tokens.
-   * Supported colors are:
-   * - black
-   * - red
-   * - green
-   * - yellow
-   * - blue
-   * - magenta
-   * - cyan
-   * - white
-   * - bright_black|gray|grey
-   * - bright_red
-   * - bright_green
-   * - bright_yellow
-   * - bright_blue
-   * - bright_magenta
-   * - bright_cyan
-   * - bright_white
-   *
-   * The color remains active until another color token is found,
-   * or if |reset| is found (which resets the terminal color to the default).
-   *
-   * @example
-   *
-   * Acclimate.log("Hello $name$", { name: "Pablo" });
-   * // "Hello Pablo"
-   *
-   * Acclimate.log("|red|Error:|reset| There was an error.")
-   * // "Error: There was an error."
-   * // ^ the "Error:" portion will be red
-   *
+   * Write a formatted conversational or diagnostic message to `stderr`
+   * (keeping `stdout` clean for machine-consumable data). Supports `$varName$`
+   * interpolation and `|<COLOR>|` tokens, automatically stripping color on
+   * redirected streams, nonempty `NO_COLOR`, or `TERM=dumb`.
    */
   log: (
     message: string,
-    params?: Record<string, string | boolean | number | null | undefined>,
+    params?: Readonly<
+      Record<string, string | boolean | number | null | undefined>
+    >,
+    options?: Readonly<AcclimateLogOptions>,
   ) => void;
 
   /**
-   * Prompt the user for interactive input in the terminal.
-   *
-   * @param options - Prompt configuration.
-   * @returns The user's response, or undefined when left empty and optional.
+   * Write intentional machine-consumable text exclusively to `stdout` without
+   * ANSI formatting or diagnostic chatter.
    */
-  requestInput: (options: {
-    message: string;
-    params: Record<string, string>;
-    responseOptions: {
-      required: boolean;
-      type?: "string" | "number" | "boolean";
+  writeData: (
+    data: string,
+    options?: Readonly<{
+      stream?: TerminalOutputStream;
+      trailingNewline?: boolean;
+    }>,
+  ) => void;
 
-      /*
-       * Default value to use if the user enters an empty response.
-       *
-       * If the option is `required` and the user doesn't supply a value, we will
-       * not show an error if there is a `defaultValue` we can use.
-       */
-      defaultValue?: string | number | boolean;
-    };
-  }) => Promise<string | undefined>;
+  /**
+   * Serialize a value as JSON and write it exclusively to `stdout` so piped
+   * consumers (such as `jq` or scripts) receive clean structured output.
+   */
+  writeJson: (
+    value: unknown,
+    options?: Readonly<{
+      stream?: TerminalOutputStream;
+      pretty?: boolean;
+    }>,
+  ) => void;
+
+  /**
+   * Prompt the user for interactive input over the controlling terminal
+   * (`/dev/tty`), delegating `choices` and boolean prompts to choice menus and
+   * handling unattended fallback cleanly.
+   */
+  requestInput: (
+    options: Readonly<RequestTerminalInputOptions>,
+  ) => Promise<string | undefined>;
+
+  /**
+   * Present an interactive choice menu on the controlling terminal (`/dev/tty`)
+   * supporting Up/Down and `j`/`k` wrapping, `g`/`G` jumps, `Enter` confirm,
+   * and `Ctrl-C`/`EOF` cancellation.
+   */
+  requestChoice: <TValue extends string = string>(
+    options: Readonly<ChoiceMenuOptions<TValue>>,
+  ) => Promise<TValue>;
 };
 
+/**
+ * Primary public facade for creating, running, logging, writing structured
+ * data, and prompting interactively in `@avandar/acclimate` CLIs.
+ */
 export const Acclimate: Acclimate = {
   createCLI,
   run: (cli: AnyCLI) => {
     void executeCLI({
       cli,
       input: process.argv.slice(2),
+      stdin: process.stdin,
       stdout: process.stdout,
       stderr: process.stderr,
+      env: process.env,
       onExitCode: (exitCode) => {
         process.exitCode = exitCode;
       },
@@ -103,11 +110,36 @@ export const Acclimate: Acclimate = {
   },
   log: (
     message: string,
-    params: Record<string, string | boolean | number | null | undefined> = {},
+    params: Readonly<
+      Record<string, string | boolean | number | null | undefined>
+    > = {},
+    options: Readonly<AcclimateLogOptions> = {},
   ) => {
-    console.log(generateTerminalMessage(message, params));
+    const stream = options.stream ?? process.stderr;
+    const isColorEnabled =
+      options.color ?? isColorEnabledForStream({ stream, env: options.env });
+    stream.write(
+      `${generateTerminalMessage(message, params, { color: isColorEnabled })}\n`,
+    );
+  },
+  writeData: (data: string, options = {}) => {
+    const stream = options.stream ?? process.stdout;
+    const suffix = options.trailingNewline === false ? "" : "\n";
+    stream.write(`${data}${suffix}`);
+  },
+  writeJson: (value: unknown, options = {}) => {
+    const stream = options.stream ?? process.stdout;
+    const serialized = JSON.stringify(
+      value,
+      undefined,
+      options.pretty ? 2 : undefined,
+    );
+    stream.write(`${serialized}\n`);
   },
   requestInput: (options) => {
     return requestTerminalInput(options);
+  },
+  requestChoice: (options) => {
+    return requestChoiceMenu(options);
   },
 };

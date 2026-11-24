@@ -1,5 +1,6 @@
 const COLOR_CODES: Record<string, string> = {
   reset: "\x1b[0m",
+  bold: "\x1b[1m",
   dim: "\x1b[2m",
   black: "\x1b[30m",
   red: "\x1b[31m",
@@ -50,46 +51,30 @@ function applyColors(message: string) {
 }
 
 /**
- * Outputs a message intended to be passed directly to `console.log`
+ * Formats a terminal message with `$varName$` interpolation and `|<COLOR>|`
+ * ANSI styling tokens, or strips known style tokens when `options.color` is
+ * `false`.
  *
- * Supports interpolation using `$varName$` as tokens.
- *
- * Colors can be changed within a message `|<COLOR_NAME>|` tokens.
- * Supported colors are:
- * - black
- * - red
- * - green
- * - yellow
- * - blue
- * - magenta
- * - cyan
- * - white
- * - bright_black|gray|grey
- * - bright_red
- * - bright_green
- * - bright_yellow
- * - bright_blue
- * - bright_magenta
- * - bright_cyan
- * - bright_white
- *
- * The color remains active until another color token is found,
- * or if |reset| is found (which resets the terminal color to the default).
- *
- * @example
- *
- * Acclimate.log("Hello $name$", { name: "Pablo" });
- * // "Hello Pablo"
- *
- * Acclimate.log("|red|Error:|reset| There was an error.")
- * // "Error: There was an error."
- * // ^ the "Error:" portion will be red
- *
+ * Used by `Acclimate.log`, help rendering, error rendering, and interactive
+ * prompts to keep dark-terminal styling and plain-mode output consistent.
  */
 export function generateTerminalMessage(
   message: string,
-  params: Record<string, string | boolean | number | null | undefined> = {},
+  params: Readonly<
+    Record<string, string | boolean | number | null | undefined>
+  > = {},
+  options: Readonly<{ color?: boolean }> = {},
 ): string {
+  const isColorEnabled = options.color ?? true;
+  if (!isColorEnabled) {
+    return interpolateParams(message, params).replace(
+      COLOR_TOKEN_REGEX,
+      (match, colorName: string) => {
+        return COLOR_CODES[colorName.toLowerCase()] !== undefined ? "" : match;
+      },
+    );
+  }
+
   const hasColorToken = Boolean(message.match(COLOR_TOKEN_REGEX));
   const endsWithReset = message.trimEnd().endsWith("|reset|");
   const withReset =

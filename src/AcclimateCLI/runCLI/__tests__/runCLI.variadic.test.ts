@@ -1,37 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createCLI } from "@/AcclimateCLI/createCLI";
 import { runCLI } from "@/AcclimateCLI/runCLI/runCLI";
-import { expectRejectedCLIErrorCode } from "./runCLI.testHelpers";
+import {
+  createMockTerminalSession,
+  expectRejectedCLIErrorCode,
+} from "./runCLI.testHelpers";
 import type { ActionArgs } from "./runCLI.testHelpers";
-
-const readlineMocks = vi.hoisted(() => {
-  const question = vi.fn<() => Promise<string>>();
-  const close = vi.fn();
-  const createInterface = vi.fn(() => {
-    return {
-      question,
-      close,
-    };
-  });
-
-  return { question, close, createInterface };
-});
-
-vi.mock("node:readline/promises", () => {
-  return {
-    createInterface: readlineMocks.createInterface,
-  };
-});
-
-beforeEach(() => {
-  readlineMocks.question.mockReset();
-  readlineMocks.close.mockReset();
-  readlineMocks.createInterface.mockReset();
-  readlineMocks.createInterface.mockReturnValue({
-    question: readlineMocks.question,
-    close: readlineMocks.close,
-  });
-});
 
 describe("runCLI - variadic positional args and interleaved flags", () => {
   it("passes an empty array when an optional variadic arg has no defaultValue and receives zero inputs", async () => {
@@ -311,19 +285,22 @@ describe("runCLI - variadic positional args and interleaved flags", () => {
       })
       .action(action);
 
-    readlineMocks.question.mockResolvedValueOnce("src/index.ts");
+    const firstTerminal = createMockTerminalSession();
+    firstTerminal.input.write("src/index.ts\n");
 
-    await runCLI({ cli, input: [] });
+    await runCLI({ cli, input: [], terminal: firstTerminal.session });
     expect(action).toHaveBeenCalledWith({ paths: ["src/index.ts"] });
 
     action.mockClear();
-    readlineMocks.question.mockResolvedValueOnce("");
-    await runCLI({ cli, input: [] });
+    const secondTerminal = createMockTerminalSession();
+    secondTerminal.input.write("\n");
+    await runCLI({ cli, input: [], terminal: secondTerminal.session });
     expect(action).toHaveBeenCalledWith({ paths: [] });
   });
 
   it("falls back to defaultValue when askIfEmpty variadic arg is submitted blank", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
+    const terminal = createMockTerminalSession();
 
     const cli = createCLI("lint")
       .addPositionalArg({
@@ -336,9 +313,9 @@ describe("runCLI - variadic positional args and interleaved flags", () => {
       })
       .action(action);
 
-    readlineMocks.question.mockResolvedValueOnce("");
+    terminal.input.write("\n");
 
-    await runCLI({ cli, input: [] });
+    await runCLI({ cli, input: [], terminal: terminal.session });
     expect(action).toHaveBeenCalledWith({ paths: ["src"] });
   });
 

@@ -1,37 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createCLI } from "@/AcclimateCLI/createCLI";
 import { runCLI } from "@/AcclimateCLI/runCLI/runCLI";
 import { generateTerminalMessage } from "@/generateTerminalMessage/generateTerminalMessage";
+import { createMockTerminalSession } from "./runCLI.testHelpers";
 import type { ActionArgs } from "./runCLI.testHelpers";
-
-const readlineMocks = vi.hoisted(() => {
-  const question = vi.fn<() => Promise<string>>();
-  const close = vi.fn();
-  const createInterface = vi.fn(() => {
-    return {
-      question,
-      close,
-    };
-  });
-
-  return { question, close, createInterface };
-});
-
-vi.mock("node:readline/promises", () => {
-  return {
-    createInterface: readlineMocks.createInterface,
-  };
-});
-
-beforeEach(() => {
-  readlineMocks.question.mockReset();
-  readlineMocks.close.mockReset();
-  readlineMocks.createInterface.mockReset();
-  readlineMocks.createInterface.mockReturnValue({
-    question: readlineMocks.question,
-    close: readlineMocks.close,
-  });
-});
 
 describe("runCLI - positional args", () => {
   it("applies defaultValue for an omitted optional positional arg alongside a required arg", async () => {
@@ -115,6 +87,7 @@ describe("runCLI - positional args", () => {
 
   it("prompts for an optional positional arg when askIfEmpty is true", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
+    const terminal = createMockTerminalSession();
 
     const cli = createCLI("positional-ask-if-empty")
       .addPositionalArg({
@@ -126,21 +99,21 @@ describe("runCLI - positional args", () => {
       })
       .action(action);
 
-    readlineMocks.question.mockResolvedValueOnce("alpha");
+    terminal.input.write("alpha\n");
 
-    await runCLI({ cli, input: [] });
+    await runCLI({ cli, input: [], terminal: terminal.session });
 
-    expect(readlineMocks.question).toHaveBeenCalledWith(
+    expect(terminal.getOutput()).toContain(
       generateTerminalMessage(
         "|bright_cyan|Please enter a value for tag (Short tag value)|reset| |gray|(press Enter to leave empty)|reset| ",
       ),
     );
     expect(action).toHaveBeenCalledWith({ tag: "alpha" });
-    expect(readlineMocks.close).toHaveBeenCalledTimes(1);
   });
 
   it("uses the custom askIfEmpty message when provided", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
+    const terminal = createMockTerminalSession();
 
     const cli = createCLI("positional-ask-if-empty-message")
       .addPositionalArg({
@@ -153,11 +126,11 @@ describe("runCLI - positional args", () => {
       })
       .action(action);
 
-    readlineMocks.question.mockResolvedValueOnce("beta");
+    terminal.input.write("beta\n");
 
-    await runCLI({ cli, input: [] });
+    await runCLI({ cli, input: [], terminal: terminal.session });
 
-    expect(readlineMocks.question).toHaveBeenCalledWith(
+    expect(terminal.getOutput()).toContain(
       generateTerminalMessage(
         "|bright_cyan|Tag to use?|reset| |gray|(press Enter to leave empty)|reset| ",
       ),
@@ -167,6 +140,7 @@ describe("runCLI - positional args", () => {
 
   it("returns undefined when optional askIfEmpty is left blank", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
+    const terminal = createMockTerminalSession();
 
     const cli = createCLI("positional-ask-if-empty-optional")
       .addPositionalArg({
@@ -177,20 +151,17 @@ describe("runCLI - positional args", () => {
       })
       .action(action);
 
-    readlineMocks.question.mockResolvedValueOnce("");
+    terminal.input.write("\n");
 
-    await runCLI({ cli, input: [] });
+    await runCLI({ cli, input: [], terminal: terminal.session });
 
     expect(action).toHaveBeenCalledWith({ note: undefined });
   });
 
-  it("re-prompts until a required askIfEmpty positional arg is provided", async () => {
+  it("re-prompts on the terminal session until a required askIfEmpty positional arg is provided", async () => {
     const action = vi.fn<(args: ActionArgs) => void>();
-    const stdoutSpy = vi
-      .spyOn(process.stdout, "write")
-      .mockImplementation(() => {
-        return true;
-      });
+    const terminal = createMockTerminalSession();
+    const stdoutChunks: string[] = [];
 
     const cli = createCLI("positional-ask-if-empty-required")
       .addPositionalArg({
@@ -201,20 +172,25 @@ describe("runCLI - positional args", () => {
       })
       .action(action);
 
-    readlineMocks.question
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce("service");
+    terminal.input.write("\nservice\n");
 
-    await runCLI({ cli, input: [] });
+    await runCLI({
+      cli,
+      input: [],
+      stdout: {
+        write: (chunk: string) => {
+          stdoutChunks.push(chunk);
+        },
+      },
+      terminal: terminal.session,
+    });
 
-    expect(readlineMocks.question).toHaveBeenCalledTimes(2);
-    expect(stdoutSpy).toHaveBeenCalledWith(
+    expect(terminal.getOutput()).toContain(
       generateTerminalMessage(
         "|red|This value is required.|reset| Please enter a value.\n",
       ),
     );
+    expect(stdoutChunks.join("")).toBe("");
     expect(action).toHaveBeenCalledWith({ target: "service" });
-
-    stdoutSpy.mockRestore();
   });
 });

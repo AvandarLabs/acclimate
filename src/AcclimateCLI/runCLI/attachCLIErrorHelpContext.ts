@@ -14,10 +14,20 @@ export function attachCLIErrorHelpContext(options: {
   commandPath: readonly string[];
   error: CLIError;
 }): CLIError {
+  if (options.error.code === "prompt_cancelled") {
+    return options.error.withHelpContext({
+      commandPath: options.commandPath,
+      hint: options.error.hint,
+      usage: undefined,
+    });
+  }
+
   const commandLabel = options.commandPath.join(" ");
   return options.error.withHelpContext({
     commandPath: options.commandPath,
-    hint: `Run ${commandLabel} --help to see available options and usage.`,
+    hint:
+      options.error.hint ??
+      `Run ${commandLabel} --help to see available options and usage.`,
     usage: generateHelpText(options.cli, { commandPath: options.commandPath }),
   });
 }
