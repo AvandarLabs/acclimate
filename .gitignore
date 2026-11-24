@@ -40,3 +40,7 @@ coverage
 
 # Difit session comments
 .difit/
+
+# wt runs pnpm install in new worktrees. This repo uses npm, and a tracked
+# pnpm-lock.yaml makes Changesets try to run pnpm in CI.
+pnpm-lock.yaml

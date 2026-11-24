@@ -1,5 +1,5 @@
 # Changesets
 
-Releases are driven by changesets. See `docs/releasing.md` for the full flow.
-
-Run `npm run changeset` to add one alongside a user-facing change.
+Releases are automated: see `docs/releasing.md`. Changesets for each release
+are generated from merged commits in CI, so you normally add nothing here.
+Run `npm run changeset` only to override the generated notes or bump.

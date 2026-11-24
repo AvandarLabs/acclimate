@@ -3,10 +3,11 @@ name: Release
 # Publishes @avandar/acclimate to npm and creates a GitHub release.
 #
 # Flow:
-#   1. PRs merge to `main`, each optionally carrying a changeset
-#      (`npm run changeset`).
-#   2. This workflow opens (or updates) a "Version Packages" PR that applies
-#      the pending changesets: bumps the version and writes CHANGELOG.md.
+#   1. Work lands on `main`, with no release bookkeeping.
+#   2. This workflow writes changesets for everything merged since the last
+#      release (bump from commit types and branch prefixes, note text from an
+#      Anthropic model), then opens or updates a "Release: @avandar/acclimate"
+#      PR that bumps the version and writes CHANGELOG.md.
 #   3. Merging that PR runs this workflow again. No changesets are pending, so
 #      it publishes to npm, tags `v<version>`, and creates a GitHub release
 #      whose notes come from the changelog.
@@ -56,6 +57,16 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+
+      # Writes `.changeset/auto-*.md` for commits merged since the last
+      # release. The files stay uncommitted and are rebuilt every run. Skips
+      # when a hand-written changeset exists or the current version is not
+      # published yet (the version PR just merged). If the key is missing or
+      # the model call fails, notes fall back to commit subjects.
+      - name: Generate changesets from merged commits
+        run: npm run release:changesets
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Create version PR or publish
         uses: changesets/action@v1
