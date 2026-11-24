@@ -1,0 +1,72 @@
+name: Release
+
+# Publishes @avandar/acclimate to npm and creates a GitHub release.
+#
+# Flow:
+#   1. PRs merge to `main`, each optionally carrying a changeset
+#      (`npm run changeset`).
+#   2. This workflow opens (or updates) a "Version Packages" PR that applies
+#      the pending changesets: bumps the version and writes CHANGELOG.md.
+#   3. Merging that PR runs this workflow again. No changesets are pending, so
+#      it publishes to npm, tags `v<version>`, and creates a GitHub release
+#      whose notes come from the changelog.
+#
+# Nothing publishes without a human merging the version PR.
+#
+# There is no npm token. Publishing authenticates over OIDC ("trusted
+# publishing"): npm exchanges this run's GitHub identity for a short-lived
+# token. The package's trusted publisher on npmjs.com names this repo and this
+# filename, so renaming this file breaks publishing until npm is updated.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # version PR branch, tags, GitHub releases
+      pull-requests: write # open the version PR
+      id-token: write # npm trusted publishing + provenance
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          # Node 24 ships npm >= 11.5.1, which trusted publishing requires.
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+
+      # Gate: never publish something that does not type-check, lint, test,
+      # and build.
+      - run: npm run type
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+      - name: Create version PR or publish
+        uses: changesets/action@v1
+        with:
+          version: npm run changeset:version
+          publish: npm run release
+          title: "Release: @avandar/acclimate"
+          commit: "Release: @avandar/acclimate"
+          # Tags the release and creates the GitHub release (default true,
+          # explicit for clarity).
+          createGithubReleases: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"
