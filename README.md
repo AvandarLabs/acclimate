@@ -30,9 +30,13 @@ Acclimate.run(cli);
 
 ## API
 
-Public exports from `acclimate`:
+Public exports from `@avandar/acclimate`:
 
 - `Acclimate`
+- `CLIError` (with `error.code` of type `CLIErrorCode`)
+- Types: `IAcclimateCLI`, `AnyCLI`, `CLIParamScalarValue`, `CLIParamDataType`,
+  `CLIPositionalParam`, `CLIScalarPositionalParam`, `CLIVariadicPositionalParam`,
+  `CLIOptionParam`, `CLICommandName`, `CLIFullOptionName`, `CLIOptionAlias`
 
 ### `Acclimate`
 
@@ -121,36 +125,49 @@ cli.getCommandCLI(commandName: string): IAcclimateCLI
 
 Acclimate uses config objects to describe positional args and options.
 
-- **Positional args**: `CLIPositionalParam`
+- **Positional args**: `CLIPositionalParam` (`CLIScalarPositionalParam | CLIVariadicPositionalParam`)
   - **name**: `string` (prefer `camelCase` to match runtime parsing)
   - **type**: `"string" | "number" | "boolean"`
-  - **required**: `boolean`
+  - **required**: `boolean` (for variadic args: `true` = one-or-more, `false` = zero-or-more)
+  - **variadic?**: `boolean` (when `true`, captures all remaining positional arguments as a typed array; must be the last positional argument)
   - **description?**: `string`
-  - **defaultValue?**: depends on `type`
-  - **choices?**: allowed values list
-  - **parser?**: `(value: string) => value`
-  - **validator?**: `(value) => true | string`
+  - **defaultValue?**: scalar value matching `type`, or a readonly array of values when `variadic: true`
+  - **choices?**: allowed values list (`readonly`) enforced on every parsed value
+  - **parser?**: `(value: string) => value` (runs per element when `variadic: true`)
+  - **validator?**: `(value) => true | string` (runs per element when `variadic: true`)
 
 - **Options**: `CLIOptionParam`
   - **name**: `--${string}` (example: `--dry-run`)
   - **aliases?**: `readonly ("--x" | "-x")[]`
   - **required**: `boolean`
   - Same `type`, `defaultValue`, `choices`, `parser`, `validator` fields as a
-    positional arg
+    scalar positional arg
 
-### Parsing behavior (current)
+### Parsing behavior
 
-- **Positional args**: validated and parsed in order; extra positional args
-  throw an error.
-- **Options**: parsing starts at the first token that begins with `-`. Each
-  option consumes tokens until the next option; its raw value is the consumed
-  tokens joined with spaces.
+See [docs/argument-parsing.md](docs/argument-parsing.md) for full details.
+
+- **Positional args**: fixed positional args are parsed in order. A trailing
+  `variadic: true` positional arg collects all remaining positional tokens as a
+  typed array (defaulting to `[]` or a fresh copy of `defaultValue` when
+  optional and omitted). Extra positional args without a variadic arg throw
+  `CLIError` (`too_many_positional_args`).
+- **Interleaved flags and positional args**: options and positional arguments
+  may be mixed in any order (before, between, or after each other). Global
+  options may also appear before or after a sub-command name.
+- **Value-taking options (`string` / `number`)**: consume a single following
+  token (`--format json`) or an inline value after `=` (`--format=json`,
+  `-f=json`). Pass multi-word values as one quoted shell token. Missing values
+  throw `CLIError` (`missing_option_value`).
+- **Boolean flags**: `--flag` with no value parses as `true` without consuming
+  the next token; pass `--flag=false` or `--flag=true` to set an explicit value.
+- **End-of-options separator (`--`)**: every token after `--` is treated
+  verbatim as a positional argument (never as an option or sub-command).
 - **Option keys in `action(args)`**: option names are camel-cased, so
   `--dry-run` becomes `dryRun`.
-- **Boolean flags**: `--flag` with no value parses as `true` (only the
-  literal string `false` parses as `false`).
-- **Errors**: missing required args/options (and invalid values) throw
-  `CLIError`.
+- **Errors**: unknown flags before `--`, missing option values, missing required
+  args/options, invalid numbers, values outside `choices`, and failed validators
+  throw `CLIError` with a machine-readable `code`.
 
 ## Prerequisites
 
@@ -249,6 +266,49 @@ const cli = Acclimate.createCLI("greet")
   });
 
 Acclimate.run(cli);
+```
+
+### Variadic positional args + interleaved flags
+
+```ts
+import { Acclimate } from "@avandar/acclimate";
+
+const coverageCmd = Acclimate.createCLI("coverage")
+  .description("Check coverage for zero or more paths")
+  .addPositionalArg({
+    name: "paths",
+    type: "string",
+    required: false,
+    variadic: true,
+    description: "Target files or directories",
+  })
+  .addOption({
+    name: "--format",
+    aliases: ["-f"] as const,
+    type: "string",
+    required: false,
+    choices: ["stylish", "agent", "json"] as const,
+    defaultValue: "stylish",
+  })
+  .addOption({
+    name: "--no-prompt",
+    type: "boolean",
+    required: false,
+    defaultValue: false,
+  })
+  .action(({ paths, format, noPrompt }) => {
+    // paths: string[]
+    console.log({ paths, format, noPrompt });
+  });
+
+const lintCLI = Acclimate.createCLI("avandar-lint").addCommand(
+  "coverage",
+  coverageCmd,
+);
+
+// Works with flags before, between, or after paths, and with `--` separator:
+// avandar-lint coverage --format json src/a.ts src/b.ts --no-prompt
+Acclimate.run(lintCLI);
 ```
 
 ### Sub-commands + global options

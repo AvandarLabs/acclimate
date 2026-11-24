@@ -26,6 +26,10 @@ type CLIErrorInfo =
       details: { optionName: string };
     }
   | {
+      code: "missing_option_value";
+      details: { optionName: string };
+    }
+  | {
       code: "unknown_option";
       details: {
         optionName: string;
@@ -40,9 +44,21 @@ type CLIErrorInfo =
     }
   | { code: "unknown_error"; details: undefined };
 
+/** Machine-readable error code reported by `CLIError` instances. */
+export type CLIErrorCode = CLIErrorInfo["code"];
+
 type CLIErrorOptions = { cliName: string; message: string } & CLIErrorInfo;
 
+/**
+ * Structured error thrown when CLI configuration, argument parsing, or value
+ * validation fails. Callers can inspect `error.code` to branch on the failure
+ * kind without matching formatted message strings.
+ */
 export class CLIError extends Error {
+  /** Machine-readable code identifying the CLI failure category. */
+  readonly code: CLIErrorCode;
+
+  /** Build an error when a parsed parameter value fails validation. */
   static invalidCLIParamValue(options: {
     cliName: string;
     paramName: string;
@@ -57,6 +73,8 @@ export class CLIError extends Error {
       details: { paramName: options.paramName, paramValue: options.paramValue },
     });
   }
+
+  /** Build an error when a required option is not supplied. */
   static missingRequiredOption(options: {
     cliName: string;
     optionName: string;
@@ -67,6 +85,21 @@ export class CLIError extends Error {
       message:
         options.message ?? `Required option "${options.optionName}" is missing`,
       code: "missing_required_option",
+      details: { optionName: options.optionName },
+    });
+  }
+
+  /** Build an error when a value-taking option is passed without a value. */
+  static missingOptionValue(options: {
+    cliName: string;
+    optionName: string;
+    message?: string;
+  }): CLIError {
+    return new CLIError({
+      cliName: options.cliName,
+      message:
+        options.message ?? `Option "${options.optionName}" requires a value`,
+      code: "missing_option_value",
       details: { optionName: options.optionName },
     });
   }
@@ -140,10 +173,7 @@ export class CLIError extends Error {
     });
   }
 
-  static alreadyRun(options: {
-    cliName: string;
-    message?: string;
-  }): CLIError {
+  static alreadyRun(options: { cliName: string; message?: string }): CLIError {
     return new CLIError({
       cliName: options.cliName,
       message: options.message ?? "CLI has already been run",
@@ -154,5 +184,6 @@ export class CLIError extends Error {
 
   constructor(options: CLIErrorOptions) {
     super(`❌ Error running ${options.cliName}: ${options.message}`);
+    this.code = options.code;
   }
 }

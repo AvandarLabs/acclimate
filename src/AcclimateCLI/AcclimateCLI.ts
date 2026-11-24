@@ -84,10 +84,21 @@ export function AcclimateCLI<
     >(
       param: P,
     ) => {
+      const existingVariadicArg = state.positionalArgs.find((existingParam) => {
+        return existingParam.variadic === true;
+      });
+      if (existingVariadicArg) {
+        throw CLIError.invalidPositionalArgConfig({
+          cliName,
+          positionalArgName: param.name,
+          message: `Variadic positional argument "${existingVariadicArg.name}" must be the last positional argument`,
+        });
+      }
+
       if (
         param.required &&
-        state.positionalArgs.some((p) => {
-          return !p.required;
+        state.positionalArgs.some((existingParam) => {
+          return !existingParam.required;
         })
       ) {
         throw CLIError.invalidPositionalArgConfig({

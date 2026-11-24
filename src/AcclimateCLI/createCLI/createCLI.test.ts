@@ -1,5 +1,47 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import { CLIError } from "@/CLIError";
 import { createCLI } from "./createCLI";
+
+function _expectCLIErrorCode(
+  action: () => unknown,
+  expectedCode: string,
+): CLIError {
+  let caughtError: unknown;
+  try {
+    action();
+  } catch (error) {
+    caughtError = error;
+  }
+
+  expect(caughtError).toBeInstanceOf(CLIError);
+  if (!(caughtError instanceof CLIError)) {
+    throw new Error("Expected CLIError to be thrown");
+  }
+  expect(caughtError.code).toBe(expectedCode);
+  return caughtError;
+}
+
+describe("CLIError", () => {
+  it("sets code missing_option_value when created via missingOptionValue", () => {
+    const error = CLIError.missingOptionValue({
+      cliName: "demo",
+      optionName: "--format",
+    });
+
+    expect(error).toBeInstanceOf(CLIError);
+    expect(error.code).toBe("missing_option_value");
+    expect(error.message).toContain("--format");
+  });
+
+  it("exposes code invalid_positional_arg_config on positional config error", () => {
+    const error = CLIError.invalidPositionalArgConfig({
+      cliName: "demo",
+      positionalArgName: "must",
+    });
+
+    expect(error.code).toBe("invalid_positional_arg_config");
+  });
+});
 
 describe("AcclimateCLI.addPositionalArg", () => {
   it("throws if adding a required arg after an optional arg", () => {
@@ -72,5 +114,164 @@ describe("AcclimateCLI.addPositionalArg", () => {
           required: false,
         });
     }).not.toThrowError();
+  });
+
+  it("throws invalid_positional_arg_config when adding a scalar arg after a variadic arg", () => {
+    const cli = createCLI("test-cli").addPositionalArg({
+      name: "paths",
+      type: "string",
+      required: false,
+      variadic: true,
+    });
+
+    const error = _expectCLIErrorCode(() => {
+      cli.addPositionalArg({
+        name: "extra",
+        type: "string",
+        required: false,
+      });
+    }, "invalid_positional_arg_config");
+
+    expect(error.message).toContain("paths");
+  });
+
+  it("throws invalid_positional_arg_config when adding a second variadic arg", () => {
+    const cli = createCLI("test-cli").addPositionalArg({
+      name: "paths",
+      type: "string",
+      required: true,
+      variadic: true,
+    });
+
+    _expectCLIErrorCode(() => {
+      cli.addPositionalArg({
+        name: "more",
+        type: "string",
+        required: false,
+        variadic: true,
+      });
+    }, "invalid_positional_arg_config");
+  });
+
+  it("throws invalid_positional_arg_config when adding a required variadic arg after an optional arg", () => {
+    const cli = createCLI("test-cli").addPositionalArg({
+      name: "maybe",
+      type: "string",
+      required: false,
+    });
+
+    _expectCLIErrorCode(() => {
+      cli.addPositionalArg({
+        name: "paths",
+        type: "string",
+        required: true,
+        variadic: true,
+      });
+    }, "invalid_positional_arg_config");
+  });
+
+  it("allows fixed positional args followed by a trailing variadic arg", () => {
+    expect(() => {
+      createCLI("test-cli")
+        .addPositionalArg({
+          name: "target",
+          type: "string",
+          required: true,
+        })
+        .addPositionalArg({
+          name: "paths",
+          type: "string",
+          required: false,
+          variadic: true,
+          defaultValue: ["."],
+        });
+    }).not.toThrowError();
+
+    expect(() => {
+      createCLI("test-cli")
+        .addPositionalArg({
+          name: "target",
+          type: "string",
+          required: true,
+        })
+        .addPositionalArg({
+          name: "ports",
+          type: "number",
+          required: true,
+          variadic: true,
+        });
+    }).not.toThrowError();
+  });
+
+  it("infers array types for variadic args and scalar types for fixed args", () => {
+    const cli = createCLI("typed-cli")
+      .addPositionalArg({
+        name: "target",
+        type: "string",
+        required: true,
+      })
+      .addPositionalArg({
+        name: "paths",
+        type: "string",
+        required: false,
+        variadic: true,
+        defaultValue: ["."],
+      })
+      .addOption({
+        name: "--format",
+        type: "string",
+        required: false,
+        choices: ["stylish", "agent", "json"] as const,
+      })
+      .action((args) => {
+        expectTypeOf(args.target).toEqualTypeOf<string>();
+        expectTypeOf(args.paths).toEqualTypeOf<string[]>();
+        expectTypeOf(args.format).toEqualTypeOf<"stylish" | "agent" | "json">();
+      });
+
+    expect(cli.state.positionalArgs).toHaveLength(2);
+  });
+
+  it("infers narrowed element array type when variadic choices uses as const", () => {
+    const cli = createCLI("typed-variadic-choices")
+      .addPositionalArg({
+        name: "modes",
+        type: "string",
+        required: false,
+        variadic: true,
+        choices: ["fast", "strict"] as const,
+      })
+      .action((args) => {
+        expectTypeOf(args.modes).toEqualTypeOf<Array<"fast" | "strict">>();
+      });
+
+    expect(cli.state.positionalArgs).toHaveLength(1);
+  });
+
+  it("infers number[] and boolean[] for numeric and boolean variadic args", () => {
+    const numericCLI = createCLI("typed-numbers")
+      .addPositionalArg({
+        name: "ports",
+        type: "number",
+        required: true,
+        variadic: true,
+      })
+      .action((args) => {
+        expectTypeOf(args.ports).toEqualTypeOf<number[]>();
+      });
+
+    const booleanCLI = createCLI("typed-booleans")
+      .addPositionalArg({
+        name: "flags",
+        type: "boolean",
+        required: false,
+        variadic: true,
+      })
+      .action((args) => {
+        expectTypeOf(args.flags).toEqualTypeOf<boolean[]>();
+      });
+
+    expect(numericCLI.state.positionalArgs).toHaveLength(1);
+    expect(booleanCLI.state.positionalArgs).toHaveLength(1);
   });
 });

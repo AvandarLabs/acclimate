@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { generateTerminalMessage } from "@/generateTerminalMessage/generateTerminalMessage";
 import { createCLI } from "../createCLI";
 import { generateHelpText } from "./generateHelpText";
-import { generateTerminalMessage } from "@/generateTerminalMessage/generateTerminalMessage";
 
 describe("generateHelpText", () => {
   it("formats the name and description, omitting empty sections", () => {
@@ -67,7 +67,7 @@ describe("generateHelpText", () => {
           "  |bright_white|--mode, -m|reset| (string)|reset| |red|required|reset| - |gray|Mode|reset|\n" +
           "\n" +
           "|bright_yellow|Global Options|reset|\n" +
-          "  |bright_white|--env, -e|reset| (string)|reset| |gray|optional|reset| - |gray|Environment|reset| |gray|[default: \"dev\"]|reset|",
+          '  |bright_white|--env, -e|reset| (string)|reset| |gray|optional|reset| - |gray|Environment|reset| |gray|[default: "dev"]|reset|',
       ),
     );
   });
@@ -154,6 +154,59 @@ describe("generateHelpText", () => {
     expect(helpText).toContain(
       generateTerminalMessage(
         "• |bright_white|web|reset| - |dim|No description|reset|",
+      ),
+    );
+  });
+
+  it("renders variadic positional args with ellipsis suffix and array type label", () => {
+    const cli = createCLI("lint")
+      .description("Lint workspace files")
+      .addPositionalArg({
+        name: "target",
+        type: "string",
+        required: true,
+        description: "Primary target",
+      })
+      .addPositionalArg({
+        name: "paths",
+        type: "string",
+        required: false,
+        variadic: true,
+        defaultValue: ["."],
+        description: "Additional paths",
+      });
+
+    expect(generateHelpText(cli)).toBe(
+      generateTerminalMessage(
+        [
+          "|bright_cyan|lint|reset|",
+          "  |gray|Lint workspace files|reset|",
+          "",
+          "|bright_yellow|Positional Arguments|reset|",
+          "  |bright_white|target|reset| (string)|reset| |red|required|reset| - |gray|Primary target|reset|",
+          '  |bright_white|paths...|reset| (string[])|reset| |gray|optional|reset| - |gray|Additional paths|reset| |gray|[default: ["."]]|reset|',
+        ].join("\n"),
+      ),
+    );
+  });
+
+  it("renders required variadic positional args with required label and array type", () => {
+    const cli = createCLI("sum").addPositionalArg({
+      name: "numbers",
+      type: "number",
+      required: true,
+      variadic: true,
+      description: "Numbers to add",
+    });
+
+    expect(generateHelpText(cli)).toBe(
+      generateTerminalMessage(
+        [
+          "|bright_cyan|sum|reset|",
+          "",
+          "|bright_yellow|Positional Arguments|reset|",
+          "  |bright_white|numbers...|reset| (number[])|reset| |red|required|reset| - |gray|Numbers to add|reset|",
+        ].join("\n"),
       ),
     );
   });
