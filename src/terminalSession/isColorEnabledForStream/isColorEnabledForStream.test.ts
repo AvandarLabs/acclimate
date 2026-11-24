@@ -54,4 +54,33 @@ describe("isColorEnabledForStream", () => {
       }),
     ).toBe(false);
   });
+
+  it("honors explicit isTTY override over stream.isTTY while still respecting NO_COLOR and TERM=dumb", () => {
+    expect(
+      isColorEnabledForStream({
+        stream: { write: () => {}, isTTY: false },
+        isTTY: true,
+        env: { TERM: "xterm-256color" },
+      }),
+    ).toBe(true);
+    expect(
+      isColorEnabledForStream({
+        stream: { write: () => {}, isTTY: true },
+        isTTY: false,
+        env: { TERM: "xterm-256color" },
+      }),
+    ).toBe(false);
+    expect(
+      isColorEnabledForStream({
+        isTTY: true,
+        env: { NO_COLOR: "1" },
+      }),
+    ).toBe(false);
+    expect(
+      isColorEnabledForStream({
+        isTTY: true,
+        env: { TERM: "dumb" },
+      }),
+    ).toBe(false);
+  });
 });

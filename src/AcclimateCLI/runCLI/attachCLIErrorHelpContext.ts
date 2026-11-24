@@ -1,6 +1,7 @@
 import { generateHelpText } from "@/AcclimateCLI/generateHelpText/generateHelpText";
 import type { AnyCLI } from "@/AcclimateCLI/AcclimateCLI.types";
 import type { CLIError } from "@/CLIError";
+import type { SemanticTheme } from "@/theme/theme.types";
 
 /**
  * Enriches a `CLIError` with the matched command path, actionable `--help`
@@ -13,6 +14,7 @@ export function attachCLIErrorHelpContext(options: {
   cli: AnyCLI;
   commandPath: readonly string[];
   error: CLIError;
+  theme?: SemanticTheme;
 }): CLIError {
   if (options.error.code === "prompt_cancelled") {
     return options.error.withHelpContext({
@@ -28,6 +30,9 @@ export function attachCLIErrorHelpContext(options: {
     hint:
       options.error.hint ??
       `Run ${commandLabel} --help to see available options and usage.`,
-    usage: generateHelpText(options.cli, { commandPath: options.commandPath }),
+    usage: generateHelpText(options.cli, {
+      commandPath: options.commandPath,
+      theme: options.theme,
+    }),
   });
 }

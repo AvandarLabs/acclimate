@@ -14,6 +14,7 @@ import type {
   AnyCLI,
   CLIFullOptionName,
 } from "@/AcclimateCLI/AcclimateCLI.types";
+import type { SemanticTheme } from "@/theme/theme.types";
 
 type TokenizeCLIInputOptions = {
   cli: AnyCLI;
@@ -21,6 +22,7 @@ type TokenizeCLIInputOptions = {
   commandPath?: readonly string[];
   inheritedGlobalOptionArgs?: Readonly<Record<CLIFullOptionName, string>>;
   inheritedNoPrompt?: boolean;
+  errorTheme?: SemanticTheme;
 };
 
 /** Result of tokenizing raw CLI argv tokens against a command hierarchy. */
@@ -52,6 +54,7 @@ type StepTokenOptions = {
   state: Readonly<TokenScanState>;
   token: string;
   remainingTokens: readonly string[];
+  errorTheme?: SemanticTheme;
 };
 
 function _recordOptionValue(options: {
@@ -91,7 +94,7 @@ function _recordOptionValue(options: {
 function _consumePendingOptionToken(
   options: Readonly<Omit<StepTokenOptions, "remainingTokens">>,
 ): TokenScanState {
-  const { cli, commandPath, state, token } = options;
+  const { cli, commandPath, state, token, errorTheme } = options;
   const pendingOption = state.pendingOption!;
   if (isBuiltinHelpFlag({ cli, token })) {
     return { ...state, pendingOption: undefined, isHelpRequested: true };
@@ -115,6 +118,7 @@ function _consumePendingOptionToken(
         cliName: commandPath.join(" "),
         optionName: pendingOption.canonicalName,
       }),
+      theme: errorTheme,
     });
     return {
       ...state,
@@ -134,7 +138,7 @@ function _consumePendingOptionToken(
 function _consumeFlagToken(
   options: Readonly<Omit<StepTokenOptions, "remainingTokens">>,
 ): TokenScanState {
-  const { cli, commandPath, state, token } = options;
+  const { cli, commandPath, state, token, errorTheme } = options;
   if (isBuiltinHelpFlag({ cli, token })) {
     return { ...state, isHelpRequested: true };
   }
@@ -144,10 +148,7 @@ function _consumeFlagToken(
 
   if (!entry) {
     if (rawFlag === "--no-prompt") {
-      return {
-        ...state,
-        isNoPromptRequested: inlineValue !== "false",
-      };
+      return { ...state, isNoPromptRequested: inlineValue !== "false" };
     }
     if (inlineValue === undefined && isNegativeNumberToken(token)) {
       return {
@@ -162,6 +163,7 @@ function _consumeFlagToken(
         cliName: commandPath.join(" "),
         optionName: rawFlag,
       }),
+      theme: errorTheme,
     });
     return { ...state, scanError: state.scanError ?? unknownError };
   }
@@ -180,7 +182,8 @@ function _consumeFlagToken(
 function _consumePositionalOrCommandToken(
   options: Readonly<StepTokenOptions>,
 ): TokenScanState {
-  const { cli, commandPath, state, token, remainingTokens } = options;
+  const { cli, commandPath, state, token, remainingTokens, errorTheme } =
+    options;
   const { commands } = getScanCLIState(cli);
   const canMatchSubcommand =
     !state.isAfterDoubleDash &&
@@ -202,6 +205,7 @@ function _consumePositionalOrCommandToken(
         commandPath: [...commandPath, token],
         inheritedGlobalOptionArgs: state.rawGlobalOptionArgs,
         inheritedNoPrompt: state.isNoPromptRequested,
+        errorTheme,
       }),
     };
   }
@@ -213,12 +217,19 @@ function _consumePositionalOrCommandToken(
 }
 
 function _stepToken(options: Readonly<StepTokenOptions>): TokenScanState {
-  const { cli, commandPath, state, token, remainingTokens } = options;
+  const { cli, commandPath, state, token, remainingTokens, errorTheme } =
+    options;
   if (state.delegatedResult || state.isHelpRequested) {
     return state;
   }
   if (state.pendingOption) {
-    return _consumePendingOptionToken({ cli, commandPath, state, token });
+    return _consumePendingOptionToken({
+      cli,
+      commandPath,
+      state,
+      token,
+      errorTheme,
+    });
   }
   if (state.isAfterDoubleDash) {
     return {
@@ -230,7 +241,7 @@ function _stepToken(options: Readonly<StepTokenOptions>): TokenScanState {
     return { ...state, isAfterDoubleDash: true };
   }
   if (isOptionLikeToken(token)) {
-    return _consumeFlagToken({ cli, commandPath, state, token });
+    return _consumeFlagToken({ cli, commandPath, state, token, errorTheme });
   }
   return _consumePositionalOrCommandToken({
     cli,
@@ -238,6 +249,7 @@ function _stepToken(options: Readonly<StepTokenOptions>): TokenScanState {
     state,
     token,
     remainingTokens,
+    errorTheme,
   });
 }
 
@@ -245,8 +257,9 @@ function _finalizeTokenScan(options: {
   cli: AnyCLI;
   commandPath: readonly string[];
   finalState: Readonly<TokenScanState>;
+  errorTheme?: SemanticTheme;
 }): TokenizedCLIInput {
-  const { cli, commandPath, finalState } = options;
+  const { cli, commandPath, finalState, errorTheme } = options;
   if (finalState.delegatedResult) {
     return finalState.delegatedResult;
   }
@@ -263,6 +276,7 @@ function _finalizeTokenScan(options: {
           cliName: commandPath.join(" "),
           optionName: finalState.pendingOption.canonicalName,
         }),
+        theme: errorTheme,
       });
     }
   }
@@ -294,6 +308,7 @@ export function tokenizeCLIInput(
     commandPath = [cli.getName()],
     inheritedGlobalOptionArgs = {},
     inheritedNoPrompt = false,
+    errorTheme,
   } = options;
   const initialState: TokenScanState = {
     isAfterDoubleDash: false,
@@ -314,8 +329,9 @@ export function tokenizeCLIInput(
       state,
       token,
       remainingTokens: input.slice(idx + 1),
+      errorTheme,
     });
   }, initialState);
 
-  return _finalizeTokenScan({ cli, commandPath, finalState });
+  return _finalizeTokenScan({ cli, commandPath, finalState, errorTheme });
 }

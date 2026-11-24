@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createTheme } from "@/theme/createTheme/createTheme";
 import { generateTerminalMessage } from "./generateTerminalMessage";
 
 describe("generateTerminalMessage", () => {
@@ -64,5 +65,52 @@ describe("generateTerminalMessage", () => {
         { color: false },
       ),
     ).toBe("❯ coverage |nope|");
+  });
+
+  it("applies semantic role tokens from the default dark palette and custom themes", () => {
+    expect(
+      generateTerminalMessage(
+        "|heading|Usage|reset| |error|required|reset|",
+        {},
+      ),
+    ).toBe("\x1b[93mUsage\x1b[0m \x1b[91mrequired\x1b[0m");
+
+    const customTheme = createTheme({
+      color: true,
+      palette: { accent: "bright_magenta", prompt: "bright_yellow" },
+    });
+    expect(
+      generateTerminalMessage(
+        "|accent|$cli$|reset| |prompt|Proceed?|reset|",
+        { cli: "acme" },
+        { theme: customTheme },
+      ),
+    ).toBe("\x1b[95macme\x1b[0m \x1b[93mProceed?\x1b[0m");
+  });
+
+  it("strips semantic role tokens and raw color tokens when stream is redirected, NO_COLOR is set, or TERM is dumb", () => {
+    expect(
+      generateTerminalMessage(
+        "|selected|❯ $name$|reset| |muted|(default)|reset|",
+        { name: "json" },
+        { stream: { write: () => {}, isTTY: false }, env: {} },
+      ),
+    ).toBe("❯ json (default)");
+
+    expect(
+      generateTerminalMessage(
+        "|error|❌ Failed|reset|",
+        {},
+        { isTTY: true, env: { NO_COLOR: "1" } },
+      ),
+    ).toBe("❌ Failed");
+
+    expect(
+      generateTerminalMessage(
+        "|warning|⚠️ Retry|reset|",
+        {},
+        { isTTY: true, env: { TERM: "dumb" } },
+      ),
+    ).toBe("⚠️ Retry");
   });
 });

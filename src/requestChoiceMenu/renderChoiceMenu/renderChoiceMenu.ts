@@ -1,5 +1,6 @@
-import { generateTerminalMessage } from "@/generateTerminalMessage";
+import { makeThemeFromOptions } from "@/theme/makeThemeFromOptions/makeThemeFromOptions";
 import type { ChoiceMenuItem } from "../requestChoiceMenu.types";
+import type { SemanticTheme, ThemeInput } from "@/theme/theme.types";
 
 type RenderChoiceMenuOptions = {
   message: string;
@@ -8,33 +9,29 @@ type RenderChoiceMenuOptions = {
   defaultValue?: string;
   hint?: string;
   isColorEnabled: boolean;
+  theme?: ThemeInput;
 };
 
 function _formatChoiceLine(options: {
   item: Readonly<ChoiceMenuItem>;
   isSelected: boolean;
   isDefault: boolean;
-  isColorEnabled: boolean;
+  theme: Readonly<SemanticTheme>;
 }): string {
-  const { item, isSelected, isDefault, isColorEnabled } = options;
+  const { item, isSelected, isDefault, theme } = options;
   const label = item.label ?? item.value;
-  const defaultBadge = isDefault ? " |gray|(default)|reset|" : "";
+  const defaultBadge = isDefault ? ` ${theme.muted("(default)")}` : "";
   const description =
-    item.description !== undefined ? ` - |gray|${item.description}|reset|` : "";
-  const prefix =
-    isSelected ? `|bold||bright_green|❯ ${label}|reset|` : `  ${label}`;
+    item.description !== undefined ? ` - ${theme.muted(item.description)}` : "";
+  const prefix = isSelected ? theme.selected(`❯ ${label}`) : `  ${label}`;
 
-  return generateTerminalMessage(
-    `${prefix}${defaultBadge}${description}`,
-    {},
-    { color: isColorEnabled },
-  );
+  return `${prefix}${defaultBadge}${description}`;
 }
 
 /**
- * Renders an interactive choice menu header and item list with a bold-green
- * highlighted selection and textual `❯` cursor (or plain text when color is
- * disabled).
+ * Renders an interactive choice menu header and item list using Acclimate's
+ * semantic theme (`prompt`, `muted`, and bold-green `selected` with a textual
+ * `❯` cursor, or plain text when color is disabled).
  *
  * Called by `requestChoiceMenu` on initial draw and each navigation update.
  */
@@ -42,13 +39,13 @@ export function renderChoiceMenu(options: Readonly<RenderChoiceMenuOptions>): {
   text: string;
   lineCount: number;
 } {
+  const theme = makeThemeFromOptions({
+    theme: options.theme,
+    color: options.isColorEnabled,
+  });
   const hint =
     options.hint ?? "(↑/↓ or j/k to move, g/G first/last, Enter to select)";
-  const headerLine = generateTerminalMessage(
-    `|bright_cyan|? ${options.message}|reset| |gray|${hint}|reset|`,
-    {},
-    { color: options.isColorEnabled },
-  );
+  const headerLine = `${theme.prompt(`? ${options.message}`)} ${theme.muted(hint)}`;
 
   const choiceLines = options.choices.map((item, idx) => {
     return _formatChoiceLine({
@@ -57,7 +54,7 @@ export function renderChoiceMenu(options: Readonly<RenderChoiceMenuOptions>): {
       isDefault:
         options.defaultValue !== undefined &&
         item.value === options.defaultValue,
-      isColorEnabled: options.isColorEnabled,
+      theme,
     });
   });
 

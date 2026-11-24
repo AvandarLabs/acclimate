@@ -1,6 +1,7 @@
 import { CLIError } from "@/CLIError";
-import { generateTerminalMessage } from "@/generateTerminalMessage";
+import { makeTerminalSessionFromPromptIo } from "@/terminalSession/makeTerminalSessionFromPromptIo/makeTerminalSessionFromPromptIo";
 import { openTerminalSession } from "@/terminalSession/openTerminalSession/openTerminalSession";
+import { makeThemeFromOptions } from "@/theme/makeThemeFromOptions/makeThemeFromOptions";
 import { MenuNavigation } from "./MenuNavigation/MenuNavigation";
 import { renderChoiceMenu } from "./renderChoiceMenu/renderChoiceMenu";
 import { runPlainChoiceMenu } from "./runPlainChoiceMenu";
@@ -10,6 +11,7 @@ import type {
   ChoiceMenuOptions,
 } from "./requestChoiceMenu.types";
 import type { TerminalSession } from "@/terminalSession/terminalSession.types";
+import type { SemanticTheme } from "@/theme/theme.types";
 
 const ANSI_HIDE_CURSOR = "\x1b[?25l";
 const ANSI_SHOW_CURSOR = "\x1b[?25h";
@@ -22,6 +24,7 @@ type RawMenuRuntimeOptions<TValue extends string> = {
   defaultValue: TValue | undefined;
   hint: string | undefined;
   cliName: string;
+  theme: Readonly<SemanticTheme>;
 };
 
 type EventBatchOutcome =
@@ -125,6 +128,7 @@ function _drawRawMenu<TValue extends string>(options: {
     defaultValue: runtime.defaultValue,
     hint: runtime.hint,
     isColorEnabled: runtime.session.isColorEnabled,
+    theme: runtime.theme,
   });
   state.renderedLineCount = rendered.lineCount;
   runtime.session.output.write(rendered.text);
@@ -162,19 +166,6 @@ function _processRawMenuChunk<TValue extends string>(options: {
   }
 }
 
-function _writeMenuOutcomeLine(options: {
-  session: Readonly<TerminalSession>;
-  template: string;
-}): void {
-  options.session.output.write(
-    generateTerminalMessage(
-      options.template,
-      {},
-      { color: options.session.isColorEnabled },
-    ),
-  );
-}
-
 function _createRawMenuListeners<TValue extends string>(options: {
   runtime: Readonly<RawMenuRuntimeOptions<TValue>>;
   state: RawMenuState;
@@ -183,7 +174,7 @@ function _createRawMenuListeners<TValue extends string>(options: {
   onReject: (error: Error) => void;
 }): RawMenuListeners {
   const { runtime, state, previousRawMode, onResolve, onReject } = options;
-  const { session, message, cliName } = runtime;
+  const { session, message, cliName, theme } = runtime;
   const finish = (onAfterCleanup: () => void) => {
     if (!state.isFinished) {
       state.isFinished = true;
@@ -193,10 +184,7 @@ function _createRawMenuListeners<TValue extends string>(options: {
   };
   const onCancel = () => {
     finish(() => {
-      _writeMenuOutcomeLine({
-        session,
-        template: "|yellow|✖ Cancelled|reset|\n",
-      });
+      session.output.write(`${theme.warning("✖ Cancelled")}\n`);
       onReject(CLIError.promptCancelled({ cliName }));
     });
   };
@@ -204,10 +192,9 @@ function _createRawMenuListeners<TValue extends string>(options: {
     _eraseRenderedLines(session, state.renderedLineCount);
     finish(() => {
       const label = chosenItem.label ?? chosenItem.value;
-      _writeMenuOutcomeLine({
-        session,
-        template: `|bright_green|✔|reset| |bright_cyan|${message}|reset|: ${label}\n`,
-      });
+      session.output.write(
+        `${theme.success("✔")} ${theme.prompt(message)}: ${label}\n`,
+      );
       onResolve(chosenItem.value);
     });
   };
@@ -257,11 +244,33 @@ function _runRawChoiceMenu<TValue extends string>(
   });
 }
 
+async function _openMenuTerminalSession<TValue extends string>(
+  options: Readonly<ChoiceMenuOptions<TValue>>,
+): Promise<TerminalSession | undefined> {
+  const injectedSession =
+    options.terminal ??
+    (options.promptIo ?
+      makeTerminalSessionFromPromptIo({
+        promptIo: options.promptIo,
+        env: options.env,
+      })
+    : undefined);
+  return openTerminalSession({
+    session: injectedSession,
+    interactive: options.interactive,
+    stdin: options.stdin,
+    stdout: options.stdout,
+    stderr: options.stderr,
+    env: options.env,
+    openTty: options.openTty,
+  });
+}
+
 /**
- * Displays an interactive choice menu on the controlling terminal (`/dev/tty`
- * or an injected `TerminalSession`) with Up/Down and `j`/`k` wrapping, `g`/`G`
- * jump to first/last, bold-green highlighted selection, `Enter` confirmation,
- * and `Ctrl-C`/`EOF` cancellation that always restores terminal state.
+ * Displays an interactive choice menu on the controlling terminal (`/dev/tty`,
+ * an injected `TerminalSession`, or `PromptIo`) with Up/Down and `j`/`k`
+ * wrapping, `g`/`G` jumps, semantic-themed selection, `Enter` confirmation,
+ * and `Ctrl-C`/`EOF` cancellation that restores terminal state.
  *
  * Used for `choices` options, boolean prompts, bare multi-command menus, and
  * `Acclimate.requestChoice`.
@@ -274,11 +283,7 @@ export async function requestChoiceMenu<TValue extends string = string>(
   }
 
   const cliName = options.cliName ?? "acclimate";
-  const session = await openTerminalSession({
-    session: options.terminal,
-    interactive: options.interactive,
-  });
-
+  const session = await _openMenuTerminalSession(options);
   if (!session) {
     throw CLIError.interactiveInputUnavailable({
       cliName,
@@ -286,23 +291,22 @@ export async function requestChoiceMenu<TValue extends string = string>(
     });
   }
 
+  const theme = makeThemeFromOptions({
+    theme: options.theme,
+    color: session.isColorEnabled,
+  });
   try {
+    const shared = {
+      session,
+      message: options.message,
+      choices: options.choices,
+      defaultValue: options.defaultValue,
+      cliName,
+      theme,
+    };
     return session.isRawModeSupported ?
-        await _runRawChoiceMenu({
-          session,
-          message: options.message,
-          choices: options.choices,
-          defaultValue: options.defaultValue,
-          hint: options.hint,
-          cliName,
-        })
-      : await runPlainChoiceMenu({
-          session,
-          message: options.message,
-          choices: options.choices,
-          defaultValue: options.defaultValue,
-          cliName,
-        });
+        await _runRawChoiceMenu({ ...shared, hint: options.hint })
+      : await runPlainChoiceMenu(shared);
   } finally {
     await session.close();
   }

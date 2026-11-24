@@ -35,6 +35,9 @@ Public exports from `@avandar/acclimate`:
 - `Acclimate`
 - `executeCLI`
 - `generateHelpText`
+- `createTheme`
+- `stripAnsi`
+- `DEFAULT_DARK_THEME_PALETTE`, `SEMANTIC_THEME_ROLES`, `ANSI_STYLE_CODES`
 - `requestChoiceMenu`
 - `requestTerminalInput`
 - `openTerminalSession`
@@ -44,10 +47,15 @@ Public exports from `@avandar/acclimate`:
 - Types: `IAcclimateCLI`, `AnyCLI`, `CLIExample`, `OutputStream`,
   `CLIParamScalarValue`, `CLIParamDataType`, `CLIPositionalParam`,
   `CLIScalarPositionalParam`, `CLIVariadicPositionalParam`, `CLIOptionParam`,
-  `CLICommandName`, `CLIFullOptionName`, `CLIOptionAlias`, `ChoiceMenuItem`,
-  `ChoiceMenuOptions`, `RequestTerminalInputOptions`,
-  `RequestTerminalInputResponseOptions`, `TerminalInputStream`,
-  `TerminalOutputStream`, `TerminalSession`, `TerminalSessionOptions`
+  `CLICommandName`, `CLIFullOptionName`, `CLIOptionAlias`,
+  `AcclimateRunOptions`, `AcclimateLogOptions`, `AcclimateStatusPrintOptions`,
+  `AcclimateErrorPrintOptions`, `ExecuteCLIOptions`, `RunCLIOptions`,
+  `GenerateHelpTextOptions`, `ChoiceMenuItem`, `ChoiceMenuOptions`,
+  `RequestTerminalInputOptions`, `RequestTerminalInputResponseOptions`,
+  `PromptIo`, `TerminalInputStream`, `TerminalOutputStream`, `TerminalSession`,
+  `TerminalSessionOptions`, `AnsiStyleToken`, `CreateThemeOptions`,
+  `SemanticRoleStyleInput`, `SemanticTheme`, `SemanticThemePalette`,
+  `SemanticThemePaletteOverrides`, `SemanticThemeRole`, `ThemeInput`
 
 ### `Acclimate`
 
@@ -59,30 +67,76 @@ Create a new CLI instance.
 Acclimate.createCLI(name: string): IAcclimateCLI
 ```
 
-#### `Acclimate.run(cli)`
+#### `Acclimate.run(cli, options?)` and `Acclimate.execute(cli, options?)`
 
-Run a CLI instance using `process.argv.slice(2)`. Handles built-in `-h`/`--help`
-on `stdout` (exit code `0`), built-in `--no-prompt` unattended execution,
-controlling-terminal (`/dev/tty`) choice menus and prompts, and `CLIError`
-formatting on `stderr` (setting `process.exitCode = 130` on prompt cancellation
-and `1` on other failures).
+Run a CLI instance against `options.args` (or `process.argv.slice(2)`) and
+return `Promise<number>` (`0` on success or help, `130` on prompt cancellation,
+`1` on unknown flags, validation errors, or action failures) without calling
+`process.exit()`.
+
+- Calling `Acclimate.run(cli)` at a CLI entry point sets `process.exitCode` on
+  non-zero exit.
+- Passing injectable `{ args, stdin, stdout, stderr, env, isStdoutTTY,
+isStderrTTY, terminal, promptIo, interactive, openTty, theme, onExitCode }`
+  (or calling `Acclimate.execute(cli, options)`) keeps `process.exitCode`
+  untouched and scopes injected IO across `.action()` via `AsyncLocalStorage`.
 
 ```ts
-Acclimate.run(cli: AnyCLI): void
+Acclimate.run(
+  cli: AnyCLI,
+  options?: Readonly<AcclimateRunOptions>,
+): Promise<number>
+
+Acclimate.execute(
+  cli: AnyCLI,
+  options?: Readonly<Omit<AcclimateRunOptions, "setProcessExitCode">>,
+): Promise<number>
+```
+
+#### Semantic theming (`createTheme`, `Acclimate.theme`, `Acclimate.setTheme`, `Acclimate.resetTheme`)
+
+See [docs/semantic-theming-and-io.md](docs/semantic-theming-and-io.md). Provides
+ten dark-terminal high-contrast semantic roles (`heading`, `accent`, `value`,
+`muted`, `success`, `warning`, `error`, `info`, `prompt`, `selected`) used
+consistently across help text, prompts/menus, errors, and status output. ANSI
+escapes are disabled automatically on redirected streams, non-empty `NO_COLOR`,
+or `TERM=dumb`.
+
+```ts
+const theme = createTheme({
+  stream: process.stderr,
+  env: process.env,
+  palette: { accent: "bright_magenta" },
+});
+```
+
+#### Status helpers (`Acclimate.printSuccess`, `printInfo`, `printWarn`, `printError`)
+
+Write semantic, plain-mode-safe status messages to `stderr` (with `✅`, `ℹ️`,
+`⚠️`, and `❌` plus an optional indented `  ⚠️ <hint>` recovery line on
+`printError`):
+
+```ts
+Acclimate.printSuccess("Checks passed");
+Acclimate.printInfo("Scanning workspace...");
+Acclimate.printWarn("Using fallback cache");
+Acclimate.printError("Could not authenticate", {
+  hint: "Run gh auth login and retry.",
+});
 ```
 
 #### `Acclimate.log(message, params?, options?)`
 
 Write conversational progress or diagnostics to `stderr` (keeping `stdout` clean
-for machine-consumable data). Supports `$varName$` interpolation and `|<COLOR>|`
-tokens, stripping color automatically on redirected streams, `NO_COLOR`, or
-`TERM=dumb`.
+for machine-consumable data). Supports `$varName$` interpolation, raw `|<COLOR>|`
+tokens, and semantic `|<ROLE>|` tokens, stripping color automatically on
+redirected streams, non-empty `NO_COLOR`, or `TERM=dumb`.
 
 ```ts
 Acclimate.log(
   message: string,
   params?: Record<string, string | boolean | number | null | undefined>,
-  options?: { stream?: TerminalOutputStream; color?: boolean },
+  options?: Readonly<AcclimateLogOptions>,
 ): void
 ```
 
@@ -119,28 +173,19 @@ Async execution boundary for embedding or testing a CLI with injectable
 on prompt cancellation, and `1` on other failures.
 
 ```ts
-executeCLI(options: {
-  cli: AnyCLI;
-  input: readonly string[];
-  stdin?: TerminalInputStream;
-  stdout?: TerminalOutputStream;
-  stderr?: TerminalOutputStream;
-  env?: Readonly<Record<string, string | undefined>>;
-  terminal?: TerminalSession;
-  interactive?: boolean;
-  openTty?: () => Promise<TerminalSession | undefined>;
-  onExitCode?: (exitCode: number) => void;
-}): Promise<number>
+executeCLI(options: Readonly<ExecuteCLIOptions>): Promise<number>
 ```
 
 #### `generateHelpText(cli, options?)`
 
-Render formatted usage and help text for a CLI or sub-command.
+Render formatted usage and help text for a CLI or sub-command using Acclimate's
+semantic theme (or plain text when `color: false`, redirected, `NO_COLOR`, or
+`TERM=dumb`).
 
 ```ts
 generateHelpText(
   cli: IAcclimateCLI,
-  options?: { commandPath?: readonly string[] },
+  options?: Readonly<GenerateHelpTextOptions>,
 ): string
 ```
 
@@ -463,8 +508,8 @@ Acclimate.run(root);
 ## To do
 
 - [x] When a required option or positional arg is missing this should throw a clean user-friendly error message, rather than a stack trace. This is not an internal error.
-- [ ] Add semantic functions such as Acclimate.printSuccess, .printInfo, .printWarn and .printError
-- [ ] Allow user to configure semantic colors with Acclimate.setTheme()
+- [x] Add semantic functions such as Acclimate.printSuccess, .printInfo, .printWarn and .printError
+- [x] Allow user to configure semantic colors with Acclimate.setTheme()
 - [ ] Add a beforeAll() function to handle global args
 - [ ] Add semantic arguments: e.g. email (which has a default validator)
 - [x] Add built-in `-h` / `--help` handling across root and sub-commands showing description, usage synopsis, parameters, choices, defaults, and examples.

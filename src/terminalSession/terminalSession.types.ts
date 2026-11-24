@@ -44,3 +44,15 @@ export type TerminalSessionOptions = {
   env?: Readonly<Record<string, string | undefined>>;
   openTty?: () => Promise<TerminalSession | undefined>;
 };
+
+/**
+ * Lightweight injectable prompt IO pair converted into a `TerminalSession`
+ * for interactive tests and embedded CLI callers.
+ */
+export type PromptIo = {
+  input: TerminalInputStream;
+  output: TerminalOutputStream;
+  isColorEnabled?: boolean;
+  isRawModeSupported?: boolean;
+  close?: () => void | Promise<void>;
+};

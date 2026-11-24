@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateTerminalMessage } from "@/generateTerminalMessage/generateTerminalMessage";
+import { createTheme } from "@/theme/createTheme/createTheme";
 import { createCLI } from "../createCLI";
 import { generateHelpText } from "./generateHelpText";
 
@@ -74,12 +75,12 @@ describe("generateHelpText", () => {
           "  acclimate <target> [count] [options]",
           "",
           "|bright_yellow|Positional Arguments|reset|",
-          "  |bright_white|target|reset| (string) |red|required|reset| - |gray|Target to run|reset| |gray|[choices: web | api]|reset|",
+          "  |bright_white|target|reset| (string) |bright_red|required|reset| - |gray|Target to run|reset| |gray|[choices: web | api]|reset|",
           "  |bright_white|count|reset| (number) |gray|optional|reset| - |gray|Run count|reset| |gray|[default: 2]|reset|",
           "",
           "|bright_yellow|Options|reset|",
           "  |bright_white|--verbose, -v|reset| (boolean) |gray|optional|reset| - |gray|Verbose output|reset|",
-          "  |bright_white|--mode, -m|reset| (string) |red|required|reset| - |gray|Mode|reset| |gray|[choices: fast | strict]|reset|",
+          "  |bright_white|--mode, -m|reset| (string) |bright_red|required|reset| - |gray|Mode|reset| |gray|[choices: fast | strict]|reset|",
           "  |bright_white|--help, -h|reset| (boolean) |gray|optional|reset| - |gray|Show help for this command|reset|",
           "",
           "|bright_yellow|Global Options|reset|",
@@ -147,7 +148,7 @@ describe("generateHelpText", () => {
     );
     expect(helpText).toContain(
       generateTerminalMessage(
-        "• |bright_white|db|reset| - |dim|No description|reset|",
+        "• |bright_white|db|reset| - |gray|No description|reset|",
       ),
     );
     expect(helpText).toContain(
@@ -188,7 +189,7 @@ describe("generateHelpText", () => {
           "  lint <target> [paths...] [options]",
           "",
           "|bright_yellow|Positional Arguments|reset|",
-          "  |bright_white|target|reset| (string) |red|required|reset| - |gray|Primary target|reset|",
+          "  |bright_white|target|reset| (string) |bright_red|required|reset| - |gray|Primary target|reset|",
           '  |bright_white|paths...|reset| (string[]) |gray|optional|reset| - |gray|Additional paths|reset| |gray|[default: ["."]]|reset|',
           "",
           "|bright_yellow|Options|reset|",
@@ -210,7 +211,7 @@ describe("generateHelpText", () => {
     );
     expect(generateHelpText(requiredCLI)).toContain(
       generateTerminalMessage(
-        "  |bright_white|numbers...|reset| (number[]) |red|required|reset| - |gray|Numbers to add|reset|",
+        "  |bright_white|numbers...|reset| (number[]) |bright_red|required|reset| - |gray|Numbers to add|reset|",
       ),
     );
   });
@@ -285,5 +286,50 @@ describe("generateHelpText", () => {
 
     expect(helpText).toContain("Custom help handler");
     expect(helpText).not.toContain("Show help for this command");
+  });
+
+  it("omits ANSI escapes when color is false or target stream/env is plain mode", () => {
+    const cli = createCLI("acclimate")
+      .description("A friendly CLI")
+      .addPositionalArg({
+        name: "target",
+        type: "string",
+        required: true,
+        description: "Target name",
+      });
+
+    const plainHelp = generateHelpText(cli, { color: false });
+    expect(plainHelp).not.toContain("\x1b[");
+    expect(plainHelp).toContain("acclimate");
+    expect(plainHelp).toContain("Usage");
+    expect(plainHelp).toContain("target (string) required - Target name");
+
+    expect(generateHelpText(cli, { isTTY: true, env: { NO_COLOR: "1" } })).toBe(
+      plainHelp,
+    );
+    expect(generateHelpText(cli, { isTTY: true, env: { TERM: "dumb" } })).toBe(
+      plainHelp,
+    );
+    expect(
+      generateHelpText(cli, {
+        stream: { write: () => {}, isTTY: false },
+        env: {},
+      }),
+    ).toBe(plainHelp);
+  });
+
+  it("applies custom semantic theme roles across help sections", () => {
+    const cli = createCLI("acclimate").description("A friendly CLI");
+    const customTheme = createTheme({
+      color: true,
+      palette: {
+        accent: "bright_magenta",
+        heading: "bright_blue",
+      },
+    });
+
+    const themed = generateHelpText(cli, { theme: customTheme });
+    expect(themed).toContain("\x1b[95macclimate\x1b[0m");
+    expect(themed).toContain("\x1b[94mUsage\x1b[0m");
   });
 });

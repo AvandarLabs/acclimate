@@ -1,6 +1,7 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
 import { CLIError } from "@/CLIError";
+import { createTheme } from "@/theme/createTheme/createTheme";
 import { requestChoiceMenu } from "./requestChoiceMenu";
 import type { TerminalSession } from "@/terminalSession/terminalSession.types";
 
@@ -200,5 +201,49 @@ describe("requestChoiceMenu", () => {
         terminal: mock.session,
       }),
     ).rejects.toThrow("at least one choice");
+  });
+
+  it("renders plain text without ANSI escapes via promptIo under NO_COLOR and applies custom theme roles on color TTYs", async () => {
+    const plainInput = new PassThrough();
+    const plainChunks: string[] = [];
+    const customTheme = createTheme({
+      color: true,
+      palette: { prompt: "bright_magenta", success: "bright_cyan" },
+    });
+
+    const plainPromise = requestChoiceMenu({
+      message: "Choose env",
+      choices: [{ value: "dev" }, { value: "prod" }],
+      promptIo: {
+        input: plainInput,
+        output: {
+          isTTY: true,
+          write: (chunk: string) => {
+            plainChunks.push(chunk);
+            return true;
+          },
+        },
+      },
+      env: { NO_COLOR: "1" },
+      theme: customTheme,
+    });
+
+    plainInput.write("2\n");
+    await expect(plainPromise).resolves.toBe("prod");
+    expect(plainChunks.join("")).not.toContain("\x1b[");
+    expect(plainChunks.join("")).toContain("? Choose env");
+
+    const rawMock = _createMockTerminal({ isColorEnabled: true });
+    const styledPromise = requestChoiceMenu({
+      message: "Choose env",
+      choices: [{ value: "dev" }, { value: "prod" }],
+      terminal: rawMock.session,
+      theme: customTheme,
+    });
+
+    rawMock.input.write("\r");
+    await expect(styledPromise).resolves.toBe("dev");
+    expect(rawMock.getOutput()).toContain("\x1b[96m✔\x1b[0m");
+    expect(rawMock.getOutput()).toContain("\x1b[95mChoose env\x1b[0m");
   });
 });

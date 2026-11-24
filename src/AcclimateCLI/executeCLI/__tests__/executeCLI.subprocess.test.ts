@@ -43,6 +43,7 @@ const SUBPROCESS_FIXTURE_SCRIPT = `
 function _runTsxScript(options: {
   script: string;
   argv: readonly string[];
+  env?: NodeJS.ProcessEnv;
 }): Promise<{ exitCode: number; stdout: string; stderr: string }> {
   const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
 
@@ -50,7 +51,7 @@ function _runTsxScript(options: {
     execFile(
       tsxBin,
       ["-e", options.script, "--", ...options.argv],
-      { cwd: process.cwd() },
+      { cwd: process.cwd(), env: { ...process.env, ...options.env } },
       (error, stdout, stderr) => {
         if (!error) {
           resolve({ exitCode: 0, stdout, stderr });
@@ -76,6 +77,7 @@ describe("executeCLI - subprocess boundary", () => {
     expect(rootHelp.stdout).toContain("avandar-lint");
     expect(rootHelp.stdout).toContain("Workspace linter");
     expect(rootHelp.stdout).not.toContain("ACTION_RAN");
+    expect(rootHelp.stdout).not.toContain("\x1b[");
     expect(rootHelp.stderr).toBe("");
 
     const subHelp = await _runTsxScript({
@@ -87,6 +89,7 @@ describe("executeCLI - subprocess boundary", () => {
     expect(subHelp.stdout).toContain("--verbose, -v");
     expect(subHelp.stdout).toContain("avandar-lint coverage src/");
     expect(subHelp.stdout).not.toContain("ACTION_RAN");
+    expect(subHelp.stdout).not.toContain("\x1b[");
     expect(subHelp.stderr).toBe("");
   });
 
@@ -107,6 +110,7 @@ describe("executeCLI - subprocess boundary", () => {
     expect(result.stderr).toContain(
       "avandar-lint coverage <paths...> [options]",
     );
+    expect(result.stderr).not.toContain("\x1b[");
     expect(result.stderr).not.toContain("ACTION_RAN");
     expect(result.stderr).not.toContain("UnhandledPromiseRejection");
   });
@@ -166,5 +170,33 @@ describe("executeCLI - subprocess boundary", () => {
     expect(failResult.stdout).toBe("");
     expect(failResult.stderr).toContain("--env");
     expect(failResult.stderr).toContain("deploy --env");
+    expect(failResult.stderr).not.toContain("\x1b[");
+  });
+
+  it("preserves text, emoji, and recovery guidance with zero ANSI escapes under NO_COLOR=1 and TERM=dumb", async () => {
+    const statusScript = `
+      import { Acclimate } from "./src/index";
+      const cli = Acclimate.createCLI("check").action(() => {
+        Acclimate.printInfo("Running checks");
+        Acclimate.printError("Check failed", { hint: "Run check --fix." });
+        Acclimate.writeJson({ ok: false });
+      });
+      void Acclimate.run(cli);
+    `;
+
+    for (const env of [{ NO_COLOR: "1" }, { TERM: "dumb" }]) {
+      const result = await _runTsxScript({
+        script: statusScript,
+        argv: ["check"],
+        env,
+      });
+
+      expect(result.exitCode).toBe(0);
+      expect(JSON.parse(result.stdout)).toEqual({ ok: false });
+      expect(result.stderr).toContain("ℹ️ Running checks");
+      expect(result.stderr).toContain("❌ Check failed");
+      expect(result.stderr).toContain("  ⚠️ Run check --fix.");
+      expect(result.stderr).not.toContain("\x1b[");
+    }
   });
 });

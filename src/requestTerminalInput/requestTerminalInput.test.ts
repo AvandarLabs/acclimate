@@ -1,6 +1,7 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
 import { generateTerminalMessage } from "@/generateTerminalMessage";
+import { createTheme } from "@/theme/createTheme/createTheme";
 import { requestTerminalInput } from "./requestTerminalInput";
 import type { TerminalSession } from "@/terminalSession/terminalSession.types";
 
@@ -230,5 +231,52 @@ describe("requestTerminalInput", () => {
         interactive: false,
       }),
     ).rejects.toMatchObject({ code: "interactive_input_unavailable" });
+  });
+
+  it("styles inline validation errors via semantic theme and omits ANSI escapes via promptIo under NO_COLOR", async () => {
+    const customTheme = createTheme({
+      color: true,
+      palette: { error: "bright_magenta", muted: "bright_blue" },
+    });
+
+    const styledTerminal = _createTestTerminal({ isColorEnabled: true });
+    styledTerminal.input.write("\nvalid\n");
+
+    const styledValue = await requestTerminalInput({
+      message: "|prompt|Enter key|reset|",
+      params: {},
+      responseOptions: { required: true },
+      terminal: styledTerminal.session,
+      theme: customTheme,
+    });
+    expect(styledValue).toBe("valid");
+    expect(styledTerminal.getOutput()).toContain(
+      "\x1b[95mThis value is required.\x1b[0m",
+    );
+
+    const plainInput = new PassThrough();
+    const plainChunks: string[] = [];
+    plainInput.write("\nplain-value\n");
+
+    const plainValue = await requestTerminalInput({
+      message: "|prompt|Enter key|reset|",
+      params: {},
+      responseOptions: { required: true },
+      promptIo: {
+        input: plainInput,
+        output: {
+          isTTY: true,
+          write: (chunk: string) => {
+            plainChunks.push(chunk);
+            return true;
+          },
+        },
+      },
+      env: { NO_COLOR: "1" },
+      theme: customTheme,
+    });
+    expect(plainValue).toBe("plain-value");
+    expect(plainChunks.join("")).not.toContain("\x1b[");
+    expect(plainChunks.join("")).toContain("This value is required.");
   });
 });

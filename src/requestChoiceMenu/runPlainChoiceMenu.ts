@@ -2,6 +2,16 @@ import { createLineReader } from "@/terminalSession/createLineReader/createLineR
 import type { ChoiceMenuItem } from "./requestChoiceMenu.types";
 import type { TerminalLineReader } from "@/terminalSession/createLineReader/createLineReader";
 import type { TerminalSession } from "@/terminalSession/terminalSession.types";
+import type { SemanticTheme } from "@/theme/theme.types";
+
+type PlainChoiceMenuOptions<TValue extends string> = {
+  session: Readonly<TerminalSession>;
+  message: string;
+  choices: ReadonlyArray<ChoiceMenuItem<TValue>>;
+  defaultValue: TValue | undefined;
+  cliName: string;
+  theme: Readonly<SemanticTheme>;
+};
 
 function _matchPlainChoice<TValue extends string>(options: {
   rawAnswer: string;
@@ -31,8 +41,9 @@ async function _promptPlainSelection<TValue extends string>(options: {
   session: Readonly<TerminalSession>;
   choices: ReadonlyArray<ChoiceMenuItem<TValue>>;
   defaultValue: TValue | undefined;
+  theme: Readonly<SemanticTheme>;
 }): Promise<ChoiceMenuItem<TValue>> {
-  const { lineReader, session, choices, defaultValue } = options;
+  const { lineReader, session, choices, defaultValue, theme } = options;
   const defaultPrompt =
     defaultValue !== undefined ? ` [default: ${defaultValue}]` : "";
   const promptText = `Enter choice (1-${choices.length})${defaultPrompt}: `;
@@ -48,7 +59,7 @@ async function _promptPlainSelection<TValue extends string>(options: {
   }
 
   session.output.write(
-    `Invalid selection. Enter a number between 1 and ${choices.length}.\n`,
+    `${theme.error(`Invalid selection. Enter a number between 1 and ${choices.length}.`)}\n`,
   );
   return _promptPlainSelection(options);
 }
@@ -60,21 +71,20 @@ async function _promptPlainSelection<TValue extends string>(options: {
  *
  * Called by `requestChoiceMenu` when `session.isRawModeSupported` is `false`.
  */
-export async function runPlainChoiceMenu<TValue extends string>(options: {
-  session: Readonly<TerminalSession>;
-  message: string;
-  choices: ReadonlyArray<ChoiceMenuItem<TValue>>;
-  defaultValue: TValue | undefined;
-  cliName: string;
-}): Promise<TValue> {
-  const { session, message, choices, defaultValue, cliName } = options;
+export async function runPlainChoiceMenu<TValue extends string>(
+  options: Readonly<PlainChoiceMenuOptions<TValue>>,
+): Promise<TValue> {
+  const { session, message, choices, defaultValue, cliName, theme } = options;
   const lines = [
-    `? ${message}`,
+    theme.prompt(`? ${message}`),
     ...choices.map((item, idx) => {
       const label = item.label ?? item.value;
-      const defaultBadge = item.value === defaultValue ? " (default)" : "";
+      const defaultBadge =
+        item.value === defaultValue ? ` ${theme.muted("(default)")}` : "";
       const description =
-        item.description !== undefined ? ` - ${item.description}` : "";
+        item.description !== undefined ?
+          ` - ${theme.muted(item.description)}`
+        : "";
       return `  ${idx + 1}. ${label}${defaultBadge}${description}`;
     }),
   ];
@@ -87,6 +97,7 @@ export async function runPlainChoiceMenu<TValue extends string>(options: {
       session,
       choices,
       defaultValue,
+      theme,
     });
     return selected.value;
   } finally {

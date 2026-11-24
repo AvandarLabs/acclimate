@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createTheme } from "@/theme/createTheme/createTheme";
 import { renderChoiceMenu } from "./renderChoiceMenu";
 
 describe("renderChoiceMenu", () => {
@@ -37,5 +38,38 @@ describe("renderChoiceMenu", () => {
     expect(rendered.text).not.toContain("\x1b[");
     expect(rendered.text).toContain("❯ check - Run linter");
     expect(rendered.text).toContain("  coverage (default) - Check coverage");
+  });
+
+  it("applies custom semantic theme roles when color is enabled and omits ANSI escapes when disabled", () => {
+    const customTheme = createTheme({
+      color: true,
+      palette: {
+        prompt: "bright_magenta",
+        selected: ["bold", "bright_cyan"],
+        muted: "bright_blue",
+      },
+    });
+
+    const styled = renderChoiceMenu({
+      message: "Choose target",
+      choices: [{ value: "api", description: "API server" }],
+      selectedIndex: 0,
+      isColorEnabled: true,
+      theme: customTheme,
+    });
+
+    expect(styled.text).toContain("\x1b[95m? Choose target\x1b[0m");
+    expect(styled.text).toContain("\x1b[1m\x1b[96m❯ api\x1b[0m");
+    expect(styled.text).toContain("\x1b[94mAPI server\x1b[0m");
+
+    const plain = renderChoiceMenu({
+      message: "Choose target",
+      choices: [{ value: "api", description: "API server" }],
+      selectedIndex: 0,
+      isColorEnabled: false,
+      theme: customTheme,
+    });
+    expect(plain.text).not.toContain("\x1b[");
+    expect(plain.text).toContain("❯ api - API server");
   });
 });

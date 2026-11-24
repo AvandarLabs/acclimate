@@ -1,6 +1,7 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
 import { createCLI } from "@/AcclimateCLI/createCLI";
+import { createTheme } from "@/theme/createTheme/createTheme";
 import { executeCLI } from "../executeCLI";
 import type { TerminalSession } from "@/terminalSession/terminalSession.types";
 
@@ -249,5 +250,110 @@ describe("executeCLI - unit boundary", () => {
     expect(stdout.getOutput()).toBe("");
     expect(stderr.getOutput()).toContain("--env");
     expect(stderr.getOutput()).toContain("deploy --env");
+  });
+
+  it("emits zero ANSI escapes in error and attached usage when stderr is redirected, NO_COLOR is set, or TERM is dumb, and styles TTY stderr via theme", async () => {
+    const cli = _makeCoverageCLI(() => {});
+    const customTheme = createTheme({
+      color: true,
+      palette: { error: "bright_magenta", warning: "bright_cyan" },
+    });
+
+    const redirectedStderr = _createMemoryStream();
+    const redirectedCode = await executeCLI({
+      cli,
+      args: ["coverage", "--bogus"],
+      stdout: _createMemoryStream(),
+      stderr: redirectedStderr,
+      env: {},
+      theme: customTheme,
+    });
+    expect(redirectedCode).toBe(1);
+    expect(redirectedStderr.getOutput()).not.toContain("\x1b[");
+    expect(redirectedStderr.getOutput()).toContain(
+      "⚠️ Run avandar-lint coverage --help",
+    );
+    expect(redirectedStderr.getOutput()).toContain("Usage");
+
+    const noColorStderr = _createMemoryStream();
+    await executeCLI({
+      cli,
+      args: ["coverage", "--bogus"],
+      stdout: _createMemoryStream(),
+      stderr: noColorStderr,
+      isStderrTTY: true,
+      env: { NO_COLOR: "1" },
+      theme: customTheme,
+    });
+    expect(noColorStderr.getOutput()).not.toContain("\x1b[");
+
+    const dumbStderr = _createMemoryStream();
+    await executeCLI({
+      cli,
+      args: ["coverage", "--bogus"],
+      stdout: _createMemoryStream(),
+      stderr: dumbStderr,
+      isStderrTTY: true,
+      env: { TERM: "dumb" },
+      theme: customTheme,
+    });
+    expect(dumbStderr.getOutput()).not.toContain("\x1b[");
+
+    const ttyStderr = _createMemoryStream();
+    await executeCLI({
+      cli,
+      args: ["coverage", "--bogus"],
+      stdout: _createMemoryStream(),
+      stderr: ttyStderr,
+      isStderrTTY: true,
+      env: { TERM: "xterm-256color" },
+      theme: customTheme,
+    });
+    expect(ttyStderr.getOutput()).toContain("\x1b[95m❌ Error running");
+    expect(ttyStderr.getOutput()).toContain("  \x1b[96m⚠️ Run avandar-lint");
+  });
+
+  it("returns exit code 0 and writes JSON to stdout when selecting a choice via injected promptIo", async () => {
+    const stdout = _createMemoryStream();
+    const stderr = _createMemoryStream();
+    const promptInput = Object.assign(new PassThrough(), {
+      isTTY: true,
+      isRaw: false,
+      setRawMode: (mode: boolean) => {
+        promptInput.isRaw = mode;
+      },
+    });
+    const promptOutput = Object.assign(_createMemoryStream(), { isTTY: true });
+    const cli = createCLI("deploy")
+      .addOption({
+        name: "--env",
+        type: "string",
+        required: true,
+        choices: ["dev", "prod"] as const,
+        askIfEmpty: true,
+      })
+      .action(({ env }) => {
+        stdout.write(`${JSON.stringify({ env })}\n`);
+      });
+
+    const exitPromise = executeCLI({
+      cli,
+      args: [],
+      stdout,
+      stderr,
+      promptIo: { input: promptInput, output: promptOutput },
+      env: { TERM: "xterm-256color" },
+    });
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 10);
+    });
+    promptInput.write("j");
+    promptInput.write("\r");
+
+    expect(await exitPromise).toBe(0);
+    expect(JSON.parse(stdout.getOutput())).toEqual({ env: "prod" });
+    expect(stderr.getOutput()).toBe("");
+    expect(promptOutput.getOutput()).toContain("\x1b[1m\x1b[92m❯ prod\x1b[0m");
   });
 });

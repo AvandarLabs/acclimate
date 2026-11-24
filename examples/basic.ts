@@ -1,4 +1,4 @@
-import { Acclimate } from "../src/Acclimate";
+import { Acclimate } from "../src/Acclimate/Acclimate";
 
 const DevDBCLI = Acclimate.createCLI("db").description("Database tools");
 const DevWebCLI = Acclimate.createCLI("web").description("Web tools");
@@ -133,4 +133,4 @@ const cli = Acclimate.createCLI("demo-cli")
   .description("This is a demo CLI")
   .addCommand("dev", DevCLI);
 
-Acclimate.run(cli);
+await Acclimate.run(cli);

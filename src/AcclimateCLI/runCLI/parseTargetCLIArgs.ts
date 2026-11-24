@@ -13,6 +13,7 @@ import type {
   CLIVariadicPositionalParam,
 } from "@/AcclimateCLI/AcclimateCLI.types";
 import type { TerminalSession } from "@/terminalSession/terminalSession.types";
+import type { SemanticTheme } from "@/theme/theme.types";
 
 type ParseTargetCLIArgsOptions = {
   cliName: string;
@@ -23,6 +24,7 @@ type ParseTargetCLIArgsOptions = {
   rawOptionArgs: Readonly<Record<CLIFullOptionName, string>>;
   rawGlobalOptionArgs: Readonly<Record<CLIFullOptionName, string>>;
   getTerminalSession: () => Promise<TerminalSession | undefined>;
+  theme?: SemanticTheme;
 };
 
 function _narrowParsedArray(options: {
@@ -99,8 +101,9 @@ async function _promptVariadicPositionalArg(options: {
   cliName: string;
   argConfig: CLIVariadicPositionalParam;
   getTerminalSession: () => Promise<TerminalSession | undefined>;
+  theme?: SemanticTheme;
 }): Promise<string[] | number[] | boolean[] | undefined> {
-  const { cliName, argConfig, getTerminalSession } = options;
+  const { cliName, argConfig, getTerminalSession, theme } = options;
   const hasDefaults = argConfig.defaultValue !== undefined;
   const isInteractive = (await getTerminalSession()) !== undefined;
   const promptedValue = await promptCLIParam({
@@ -117,6 +120,7 @@ async function _promptVariadicPositionalArg(options: {
       choices: "choices" in argConfig ? argConfig.choices : undefined,
     },
     getTerminalSession,
+    theme,
   });
 
   if (promptedValue !== undefined) {
@@ -142,8 +146,9 @@ async function _parseVariadicPositionalArg(options: {
   rawValues: readonly string[];
   argConfig: CLIVariadicPositionalParam;
   getTerminalSession: () => Promise<TerminalSession | undefined>;
+  theme?: SemanticTheme;
 }): Promise<string[] | number[] | boolean[]> {
-  const { cliName, rawValues, argConfig, getTerminalSession } = options;
+  const { cliName, rawValues, argConfig, getTerminalSession, theme } = options;
   if (rawValues.length > 0) {
     return _parseVariadicValues({
       cliName,
@@ -158,6 +163,7 @@ async function _parseVariadicPositionalArg(options: {
       cliName,
       argConfig,
       getTerminalSession,
+      theme,
     });
     if (promptedResult !== undefined) {
       return promptedResult;
@@ -184,8 +190,9 @@ async function _parseScalarPositionalArg(options: {
   rawValue: string | undefined;
   argConfig: CLIScalarPositionalParam;
   getTerminalSession: () => Promise<TerminalSession | undefined>;
+  theme?: SemanticTheme;
 }): Promise<CLIParamScalarValue | undefined> {
-  const { cliName, argConfig, getTerminalSession } = options;
+  const { cliName, argConfig, getTerminalSession, theme } = options;
   const effectiveRawValue =
     argConfig.askIfEmpty && options.rawValue === undefined ?
       await promptCLIParam({
@@ -193,6 +200,7 @@ async function _parseScalarPositionalArg(options: {
         paramKind: "positional",
         param: _toPromptableScalarParam(argConfig),
         getTerminalSession,
+        theme,
       })
     : options.rawValue;
 
@@ -216,9 +224,15 @@ async function _parsePositionalArgs(options: {
   positionalArgs: readonly CLIPositionalParam[];
   rawPositionalArgs: readonly string[];
   getTerminalSession: () => Promise<TerminalSession | undefined>;
+  theme?: SemanticTheme;
 }): Promise<Record<string, CLIParamDataType>> {
-  const { cliName, positionalArgs, rawPositionalArgs, getTerminalSession } =
-    options;
+  const {
+    cliName,
+    positionalArgs,
+    rawPositionalArgs,
+    getTerminalSession,
+    theme,
+  } = options;
   const hasVariadicArg = positionalArgs.some((argConfig) => {
     return argConfig.variadic === true;
   });
@@ -232,19 +246,18 @@ async function _parsePositionalArgs(options: {
 
   const entries: Array<[string, CLIParamDataType]> = [];
   for (const [idx, argConfig] of positionalArgs.entries()) {
+    const baseOptions = { cliName, argConfig, getTerminalSession, theme };
     const parsedValue =
       argConfig.variadic === true ?
         await _parseVariadicPositionalArg({
-          cliName,
-          rawValues: rawPositionalArgs.slice(idx),
+          ...baseOptions,
           argConfig,
-          getTerminalSession,
+          rawValues: rawPositionalArgs.slice(idx),
         })
       : await _parseScalarPositionalArg({
-          cliName,
-          rawValue: rawPositionalArgs[idx],
+          ...baseOptions,
           argConfig,
-          getTerminalSession,
+          rawValue: rawPositionalArgs[idx],
         });
     entries.push([argConfig.name, parsedValue]);
   }
@@ -256,8 +269,10 @@ async function _parseOptionGroup(options: {
   optionDefs: readonly CLIOptionParam[];
   rawOptions: Readonly<Record<CLIFullOptionName, string>>;
   getTerminalSession: () => Promise<TerminalSession | undefined>;
+  theme?: SemanticTheme;
 }): Promise<Record<string, CLIParamDataType>> {
-  const { cliName, optionDefs, rawOptions, getTerminalSession } = options;
+  const { cliName, optionDefs, rawOptions, getTerminalSession, theme } =
+    options;
   const entries: Array<[string, CLIParamDataType]> = [];
 
   for (const argConfig of optionDefs) {
@@ -269,6 +284,7 @@ async function _parseOptionGroup(options: {
           paramKind: "option",
           param: _toPromptableScalarParam(argConfig),
           getTerminalSession,
+          theme,
         })
       : rawValue;
 
@@ -306,18 +322,21 @@ export async function parseTargetCLIArgs(
     positionalArgs: options.positionalArgs,
     rawPositionalArgs: options.rawPositionalArgs,
     getTerminalSession: options.getTerminalSession,
+    theme: options.theme,
   });
   const parsedOptionArgs = await _parseOptionGroup({
     cliName: options.cliName,
     optionDefs: Object.values(options.optionArgs),
     rawOptions: options.rawOptionArgs,
     getTerminalSession: options.getTerminalSession,
+    theme: options.theme,
   });
   const parsedGlobalOptionArgs = await _parseOptionGroup({
     cliName: options.cliName,
     optionDefs: Object.values(options.globalOptionArgs),
     rawOptions: options.rawGlobalOptionArgs,
     getTerminalSession: options.getTerminalSession,
+    theme: options.theme,
   });
 
   return {

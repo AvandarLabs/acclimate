@@ -186,9 +186,7 @@ describe("runCLI - positional args", () => {
     });
 
     expect(terminal.getOutput()).toContain(
-      generateTerminalMessage(
-        "|red|This value is required.|reset| Please enter a value.\n",
-      ),
+      "\x1b[91mThis value is required.\x1b[0m Please enter a value.\n",
     );
     expect(stdoutChunks.join("")).toBe("");
     expect(action).toHaveBeenCalledWith({ target: "service" });

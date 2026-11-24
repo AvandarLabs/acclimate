@@ -86,10 +86,14 @@ interactive selection menus across three layers:
 
 ## Strict Stream Separation
 
-| Output kind                            | Stream                   | Helper / Behavior                                                                  |
-| -------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------- |
-| Machine data (JSON, paths, records)    | `stdout`                 | Command `.action()`, `Acclimate.writeData`, `Acclimate.writeJson`                  |
-| Explicit `-h` / `--help`               | `stdout`                 | `runCLI` / `executeCLI` (exit `0`)                                                 |
-| Conversational logs and progress       | `stderr`                 | `Acclimate.log` (strips color when redirected, `NO_COLOR`, or `TERM=dumb`)         |
-| Errors, recovery hints, usage-on-error | `stderr`                 | `formatCLIError` via `executeCLI` / `Acclimate.run` (exit `1`, or `130` on cancel) |
-| Interactive prompts and choice menus   | `/dev/tty` (or `stderr`) | `requestChoiceMenu`, `requestTerminalInput`, `runCLI`                              |
+| Output kind                            | Stream                   | Helper / Behavior                                                                        |
+| -------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------- |
+| Machine data (JSON, paths, records)    | `stdout`                 | Command `.action()`, `Acclimate.writeData`, `Acclimate.writeJson`                        |
+| Explicit `-h` / `--help`               | `stdout`                 | `runCLI` / `executeCLI` via `stdout` semantic theme (plain when piped/`NO_COLOR`/`dumb`) |
+| Conversational logs and status output  | `stderr`                 | `Acclimate.log`, `printSuccess`, `printInfo`, `printWarn`, `printError` (semantic theme) |
+| Errors, recovery hints, usage-on-error | `stderr`                 | `formatCLIError` via `executeCLI` / `Acclimate.run` (exit `1`, or `130` on cancel)       |
+| Interactive prompts and choice menus   | `/dev/tty` (or `stderr`) | `requestChoiceMenu`, `requestTerminalInput`, `runCLI` (using semantic theme)             |
+
+See [`docs/semantic-theming-and-io.md`](semantic-theming-and-io.md) for the
+semantic theme palette, plain-mode rules, and injectable `Acclimate.run` /
+`Acclimate.execute` options.

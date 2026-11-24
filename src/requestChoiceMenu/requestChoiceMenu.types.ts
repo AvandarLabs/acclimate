@@ -1,4 +1,10 @@
-import type { TerminalSession } from "@/terminalSession/terminalSession.types";
+import type {
+  PromptIo,
+  TerminalInputStream,
+  TerminalOutputStream,
+  TerminalSession,
+} from "@/terminalSession/terminalSession.types";
+import type { ThemeInput } from "@/theme/theme.types";
 
 /** Single selectable option rendered inside an interactive choice menu. */
 export type ChoiceMenuItem<TValue extends string = string> = {
@@ -29,9 +35,30 @@ export type ChoiceMenuOptions<TValue extends string = string> = {
   /** Optional pre-opened terminal session (useful in tests or wizards). */
   terminal?: TerminalSession;
 
+  /** Optional lightweight prompt IO pair converted into a terminal session. */
+  promptIo?: PromptIo;
+
+  /** Optional input stream used when opening a terminal session. */
+  stdin?: TerminalInputStream;
+
+  /** Optional stdout stream inspected for attached-TTY checks. */
+  stdout?: TerminalOutputStream;
+
+  /** Optional stderr stream used for fallback TTY prompts. */
+  stderr?: TerminalOutputStream;
+
+  /** Environment map inspected for `CI`, `NO_COLOR`, and `TERM`. */
+  env?: Readonly<Record<string, string | undefined>>;
+
+  /** Custom controlling-terminal opener for deterministic testing. */
+  openTty?: () => Promise<TerminalSession | undefined>;
+
   /** Explicit interactive override (`false` disables prompting). */
   interactive?: boolean;
 
   /** CLI name used in cancellation or unattended error messages. */
   cliName?: string;
+
+  /** Optional semantic theme or palette overrides for menu styling. */
+  theme?: ThemeInput;
 };

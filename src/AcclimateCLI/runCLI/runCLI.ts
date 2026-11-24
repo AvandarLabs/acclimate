@@ -1,7 +1,10 @@
+import { ExecutionIoContext } from "@/AcclimateCLI/ExecutionIoContext/ExecutionIoContext";
 import { generateHelpText } from "@/AcclimateCLI/generateHelpText/generateHelpText";
 import { CLIError } from "@/CLIError";
 import { requestChoiceMenu } from "@/requestChoiceMenu/requestChoiceMenu";
+import { makeTerminalSessionFromPromptIo } from "@/terminalSession/makeTerminalSessionFromPromptIo/makeTerminalSessionFromPromptIo";
 import { openTerminalSession } from "@/terminalSession/openTerminalSession/openTerminalSession";
+import { makeThemeFromOptions } from "@/theme/makeThemeFromOptions/makeThemeFromOptions";
 import { attachCLIErrorHelpContext } from "./attachCLIErrorHelpContext";
 import { parseTargetCLIArgs } from "./parseTargetCLIArgs";
 import { mergeParentGlobalOptions } from "./tokenizeCLIInput/cliOptionLookupHelpers";
@@ -14,11 +17,14 @@ import type {
   CLIParamDataType,
   CLIPositionalParam,
 } from "@/AcclimateCLI/AcclimateCLI.types";
+import type { ExecutionIoStore } from "@/AcclimateCLI/ExecutionIoContext/ExecutionIoContext";
 import type {
+  PromptIo,
   TerminalInputStream,
   TerminalOutputStream,
   TerminalSession,
 } from "@/terminalSession/terminalSession.types";
+import type { SemanticTheme, ThemeInput } from "@/theme/theme.types";
 
 /**
  * Options accepted by `runCLI` for executing a CLI against raw `argv` tokens.
@@ -30,9 +36,13 @@ export type RunCLIOptions = {
   stderr?: TerminalOutputStream;
   stdin?: TerminalInputStream;
   env?: Readonly<Record<string, string | undefined>>;
+  isStdoutTTY?: boolean;
+  isStderrTTY?: boolean;
   terminal?: TerminalSession;
+  promptIo?: PromptIo;
   interactive?: boolean;
   openTty?: () => Promise<TerminalSession | undefined>;
+  theme?: ThemeInput;
 };
 
 type RuntimeTargetCLIState = {
@@ -56,15 +66,70 @@ type TargetExecutionContext = {
   rawGlobalOptionArgs: Readonly<Record<CLIFullOptionName, string>>;
 };
 
+function _withTtyOverride(
+  stream: TerminalOutputStream,
+  isTty: boolean | undefined,
+): TerminalOutputStream {
+  if (isTty === undefined) {
+    return stream;
+  }
+  return {
+    write: (chunk: string) => {
+      return stream.write(chunk);
+    },
+    isTTY: isTty,
+  };
+}
+
+function _buildExecutionStore(
+  options: Readonly<RunCLIOptions>,
+): ExecutionIoStore {
+  const env = options.env ?? process.env;
+  const stdin = options.stdin ?? process.stdin;
+  const stdout = _withTtyOverride(
+    options.stdout ?? process.stdout,
+    options.isStdoutTTY,
+  );
+  const stderr = _withTtyOverride(
+    options.stderr ?? process.stderr,
+    options.isStderrTTY,
+  );
+  const terminal =
+    options.terminal ??
+    (options.promptIo ?
+      makeTerminalSessionFromPromptIo({ promptIo: options.promptIo, env })
+    : undefined);
+
+  return {
+    stdin,
+    stdout,
+    stderr,
+    env,
+    stdoutTheme: makeThemeFromOptions({
+      theme: options.theme,
+      stream: stdout,
+      env,
+    }),
+    stderrTheme: makeThemeFromOptions({
+      theme: options.theme,
+      stream: stderr,
+      env,
+    }),
+    terminal,
+    interactive: options.interactive,
+    openTty: options.openTty,
+  };
+}
+
 function _createLazyTerminalController(options: {
-  runOptions: Readonly<RunCLIOptions>;
+  store: Readonly<ExecutionIoStore>;
   isNoPromptRequested: boolean;
 }): LazyTerminalController {
-  const { runOptions, isNoPromptRequested } = options;
+  const { store, isNoPromptRequested } = options;
   const effectiveInteractive =
-    runOptions.interactive === false || isNoPromptRequested ?
+    store.interactive === false || isNoPromptRequested ?
       false
-    : runOptions.interactive;
+    : store.interactive;
 
   let cachedSession: TerminalSession | undefined;
   let didAttemptOpen = false;
@@ -74,13 +139,13 @@ function _createLazyTerminalController(options: {
       if (!didAttemptOpen) {
         didAttemptOpen = true;
         cachedSession = await openTerminalSession({
-          session: runOptions.terminal,
+          session: store.terminal,
           interactive: effectiveInteractive,
-          stdin: runOptions.stdin,
-          stdout: runOptions.stdout,
-          stderr: runOptions.stderr,
-          env: runOptions.env,
-          openTty: runOptions.openTty,
+          stdin: store.stdin,
+          stdout: store.stdout,
+          stderr: store.stderr,
+          env: store.env,
+          openTty: store.openTty,
         });
       }
       return cachedSession;
@@ -114,8 +179,9 @@ function _getSortedCommandChoices(
 async function _selectBareSubcommand(options: {
   context: Readonly<TargetExecutionContext>;
   getTerminalSession: () => Promise<TerminalSession | undefined>;
+  theme: SemanticTheme;
 }): Promise<TargetExecutionContext> {
-  const { context, getTerminalSession } = options;
+  const { context, getTerminalSession, theme } = options;
   const targetState = context.targetCLI.state as RuntimeTargetCLIState;
   const commandChoices = _getSortedCommandChoices(targetState.commands);
   const canOpenMenu =
@@ -123,11 +189,7 @@ async function _selectBareSubcommand(options: {
     commandChoices.length > 0 &&
     context.rawPositionalArgs.length === 0 &&
     Object.keys(context.rawOptionArgs).length === 0;
-  if (!canOpenMenu) {
-    return context;
-  }
-
-  const terminalSession = await getTerminalSession();
+  const terminalSession = canOpenMenu ? await getTerminalSession() : undefined;
   if (!terminalSession) {
     return context;
   }
@@ -138,37 +200,41 @@ async function _selectBareSubcommand(options: {
     choices: commandChoices,
     terminal: terminalSession,
     cliName,
+    theme,
   });
-
+  const targetCLI = mergeParentGlobalOptions({
+    parentCLI: context.targetCLI,
+    commandCLI: targetState.commands[chosenCommandName]!,
+  });
   return _selectBareSubcommand({
     context: {
-      targetCLI: mergeParentGlobalOptions({
-        parentCLI: context.targetCLI,
-        commandCLI: targetState.commands[chosenCommandName]!,
-      }),
+      targetCLI,
       commandPath: [...context.commandPath, chosenCommandName],
       rawPositionalArgs: [],
       rawOptionArgs: {},
       rawGlobalOptionArgs: context.rawGlobalOptionArgs,
     },
     getTerminalSession,
+    theme,
   });
 }
 
 async function _collectTargetExecution(options: {
   initialContext: Readonly<TargetExecutionContext>;
   terminalController: Readonly<LazyTerminalController>;
+  stderrTheme: SemanticTheme;
 }): Promise<{
   finalContext: TargetExecutionContext;
   parsedArgs: Record<string, CLIParamDataType>;
 }> {
-  const { terminalController } = options;
+  const { terminalController, stderrTheme } = options;
   let finalContext: TargetExecutionContext = options.initialContext;
 
   try {
     finalContext = await _selectBareSubcommand({
       context: options.initialContext,
       getTerminalSession: terminalController.getSession,
+      theme: stderrTheme,
     });
     const targetState = finalContext.targetCLI.state as RuntimeTargetCLIState;
     const parsedArgs = await parseTargetCLIArgs({
@@ -180,6 +246,7 @@ async function _collectTargetExecution(options: {
       rawOptionArgs: finalContext.rawOptionArgs,
       rawGlobalOptionArgs: finalContext.rawGlobalOptionArgs,
       getTerminalSession: terminalController.getSession,
+      theme: stderrTheme,
     });
     return { finalContext, parsedArgs };
   } catch (error: unknown) {
@@ -188,6 +255,7 @@ async function _collectTargetExecution(options: {
         cli: finalContext.targetCLI,
         commandPath: finalContext.commandPath,
         error,
+        theme: stderrTheme,
       });
     }
     throw error;
@@ -197,43 +265,54 @@ async function _collectTargetExecution(options: {
 }
 
 /**
- * Runs a CLI against raw `argv` tokens, writing built-in `-h`/`--help` or
- * unattended actionless usage to `stdout`, driving interactive choice menus
- * and prompts on `/dev/tty`, and awaiting the matched command's action.
+ * Runs a CLI against raw `argv` tokens inside an async-scoped IO context,
+ * writing themed or plain-mode help to `stdout`, driving interactive choice
+ * menus and prompts on `/dev/tty`, and awaiting the matched command's action.
  *
  * Called by `executeCLI` for process-boundary execution and by programmatic
  * callers that want structured `CLIError` rejections.
  */
 export async function runCLI(options: Readonly<RunCLIOptions>): Promise<void> {
-  const stdout = options.stdout ?? process.stdout;
-  const tokenized = tokenizeCLIInput({
-    cli: options.cli,
-    input: options.input,
-  });
+  const store = _buildExecutionStore(options);
 
-  if (tokenized.isHelpRequested) {
-    stdout.write(
-      `${generateHelpText(tokenized.targetCLI, { commandPath: tokenized.commandPath })}\n`,
+  await ExecutionIoContext.run(store, async () => {
+    const tokenized = tokenizeCLIInput({
+      cli: options.cli,
+      input: options.input,
+      errorTheme: store.stderrTheme,
+    });
+
+    if (tokenized.isHelpRequested) {
+      store.stdout.write(
+        `${generateHelpText(tokenized.targetCLI, {
+          commandPath: tokenized.commandPath,
+          theme: store.stdoutTheme,
+        })}\n`,
+      );
+      return;
+    }
+
+    const terminalController = _createLazyTerminalController({
+      store,
+      isNoPromptRequested: tokenized.isNoPromptRequested,
+    });
+    const { finalContext, parsedArgs } = await _collectTargetExecution({
+      initialContext: tokenized,
+      terminalController,
+      stderrTheme: store.stderrTheme,
+    });
+
+    const matchedState = finalContext.targetCLI.state as RuntimeTargetCLIState;
+    if (matchedState.action) {
+      await matchedState.action(parsedArgs);
+      return;
+    }
+
+    store.stdout.write(
+      `${generateHelpText(finalContext.targetCLI, {
+        commandPath: finalContext.commandPath,
+        theme: store.stdoutTheme,
+      })}\n`,
     );
-    return;
-  }
-
-  const terminalController = _createLazyTerminalController({
-    runOptions: options,
-    isNoPromptRequested: tokenized.isNoPromptRequested,
   });
-  const { finalContext, parsedArgs } = await _collectTargetExecution({
-    initialContext: tokenized,
-    terminalController,
-  });
-
-  const matchedState = finalContext.targetCLI.state as RuntimeTargetCLIState;
-  if (matchedState.action) {
-    await matchedState.action(parsedArgs);
-    return;
-  }
-
-  stdout.write(
-    `${generateHelpText(finalContext.targetCLI, { commandPath: finalContext.commandPath })}\n`,
-  );
 }

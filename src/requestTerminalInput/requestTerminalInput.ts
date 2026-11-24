@@ -2,11 +2,19 @@ import { CLIError } from "@/CLIError";
 import { generateTerminalMessage } from "@/generateTerminalMessage";
 import { requestChoiceMenu } from "@/requestChoiceMenu/requestChoiceMenu";
 import { createLineReader } from "@/terminalSession/createLineReader/createLineReader";
+import { makeTerminalSessionFromPromptIo } from "@/terminalSession/makeTerminalSessionFromPromptIo/makeTerminalSessionFromPromptIo";
 import { openTerminalSession } from "@/terminalSession/openTerminalSession/openTerminalSession";
+import { makeThemeFromOptions } from "@/theme/makeThemeFromOptions/makeThemeFromOptions";
 import type { CLIParamScalarValue } from "@/AcclimateCLI/AcclimateCLI.types";
 import type { ChoiceMenuItem } from "@/requestChoiceMenu/requestChoiceMenu.types";
 import type { TerminalLineReader } from "@/terminalSession/createLineReader/createLineReader";
-import type { TerminalSession } from "@/terminalSession/terminalSession.types";
+import type {
+  PromptIo,
+  TerminalInputStream,
+  TerminalOutputStream,
+  TerminalSession,
+} from "@/terminalSession/terminalSession.types";
+import type { SemanticTheme, ThemeInput } from "@/theme/theme.types";
 
 const SKIP_CHOICE_VALUE = "__acclimate_skip_choice__";
 
@@ -34,8 +42,15 @@ export type RequestTerminalInputOptions = {
   params: Readonly<Record<string, string>>;
   responseOptions: Readonly<RequestTerminalInputResponseOptions>;
   terminal?: TerminalSession;
+  promptIo?: PromptIo;
+  stdin?: TerminalInputStream;
+  stdout?: TerminalOutputStream;
+  stderr?: TerminalOutputStream;
+  env?: Readonly<Record<string, string | undefined>>;
+  openTty?: () => Promise<TerminalSession | undefined>;
   interactive?: boolean;
   cliName?: string;
+  theme?: ThemeInput;
 };
 
 function _scalarToString(value: CLIParamScalarValue): string {
@@ -51,34 +66,29 @@ function _buildLinePromptText(options: {
   message: string;
   params: Readonly<Record<string, string>>;
   responseOptions: Readonly<RequestTerminalInputResponseOptions>;
-  isColorEnabled: boolean;
+  theme: SemanticTheme;
 }): string {
   const { required, type, defaultValue } = options.responseOptions;
   const notice =
-    defaultValue !== undefined ? " |gray|(press Enter to use default)|reset|"
+    defaultValue !== undefined ?
+      ` ${options.theme.muted("(press Enter to use default)")}`
     : required ? ""
-    : " |gray|(press Enter to leave empty)|reset|";
+    : ` ${options.theme.muted("(press Enter to leave empty)")}`;
   const defaultNotice =
     defaultValue !== undefined ? ` [default: ${defaultValue}]` : "";
-  const booleanNotice = type === "boolean" ? " |reset|(y/n)" : "";
-  const promptTemplate = `${options.message}${defaultNotice}${booleanNotice}${notice} `;
-  return generateTerminalMessage(promptTemplate, options.params, {
-    color: options.isColorEnabled,
-  });
-}
-
-function _writeInlineValidationError(
-  session: Readonly<TerminalSession>,
-  message: string,
-): void {
-  session.output.write(
-    generateTerminalMessage(message, {}, { color: session.isColorEnabled }),
+  const booleanNotice = type === "boolean" ? " (y/n)" : "";
+  const formattedMessage = generateTerminalMessage(
+    options.message,
+    options.params,
+    { theme: options.theme },
   );
+  return `${formattedMessage}${defaultNotice}${booleanNotice}${notice} `;
 }
 
 function _validateCustomRule(options: {
   rawValue: string;
   validate: ((rawValue: string) => boolean | string) | undefined;
+  theme: Readonly<SemanticTheme>;
 }): string | undefined {
   if (!options.validate) {
     return undefined;
@@ -87,9 +97,11 @@ function _validateCustomRule(options: {
   if (validationResult === true) {
     return undefined;
   }
-  return typeof validationResult === "string" ?
-      `|red|${validationResult}|reset| Please try again.\n`
-    : "|red|That value is not valid.|reset| Please try again.\n";
+  const message =
+    typeof validationResult === "string" ? validationResult : (
+      "That value is not valid."
+    );
+  return `${options.theme.error(message)} Please try again.\n`;
 }
 
 async function _promptViaChoiceMenu(options: {
@@ -97,8 +109,9 @@ async function _promptViaChoiceMenu(options: {
   heading: string;
   responseOptions: Readonly<RequestTerminalInputResponseOptions>;
   cliName: string;
+  theme: SemanticTheme;
 }): Promise<string | undefined> {
-  const { session, heading, responseOptions, cliName } = options;
+  const { session, heading, responseOptions, cliName, theme } = options;
   const { required, defaultValue, choices } = responseOptions;
   const baseChoices: ChoiceMenuItem[] = (choices ?? []).map((choice) => {
     const stringValue = _scalarToString(choice);
@@ -124,6 +137,7 @@ async function _promptViaChoiceMenu(options: {
       defaultValue !== undefined ? _scalarToString(defaultValue) : undefined,
     terminal: session,
     cliName,
+    theme,
   });
 
   return selected === SKIP_CHOICE_VALUE ? undefined : selected;
@@ -134,6 +148,7 @@ async function _promptBooleanMenu(options: {
   heading: string;
   defaultValue: CLIParamScalarValue | undefined;
   cliName: string;
+  theme: SemanticTheme;
 }): Promise<string> {
   const defaultSelection =
     typeof options.defaultValue === "boolean" ?
@@ -151,6 +166,7 @@ async function _promptBooleanMenu(options: {
     defaultValue: defaultSelection,
     terminal: options.session,
     cliName: options.cliName,
+    theme: options.theme,
   });
 }
 
@@ -158,9 +174,11 @@ type LineAnswerEvaluation =
   | { status: "accepted"; value: string | undefined }
   | { status: "retry"; errorMessage: string };
 
-function _evaluateEmptyAnswer(
-  responseOptions: Readonly<RequestTerminalInputResponseOptions>,
-): LineAnswerEvaluation {
+function _evaluateEmptyAnswer(options: {
+  responseOptions: Readonly<RequestTerminalInputResponseOptions>;
+  theme: Readonly<SemanticTheme>;
+}): LineAnswerEvaluation {
+  const { responseOptions, theme } = options;
   if (responseOptions.defaultValue !== undefined) {
     return {
       status: "accepted",
@@ -170,8 +188,7 @@ function _evaluateEmptyAnswer(
   return responseOptions.required ?
       {
         status: "retry",
-        errorMessage:
-          "|red|This value is required.|reset| Please enter a value.\n",
+        errorMessage: `${theme.error("This value is required.")} Please enter a value.\n`,
       }
     : { status: "accepted", value: undefined };
 }
@@ -179,11 +196,12 @@ function _evaluateEmptyAnswer(
 function _evaluateLineAnswer(options: {
   answer: string;
   responseOptions: Readonly<RequestTerminalInputResponseOptions>;
+  theme: Readonly<SemanticTheme>;
 }): LineAnswerEvaluation {
-  const { answer, responseOptions } = options;
+  const { answer, responseOptions, theme } = options;
   const trimmed = answer.trim();
   if (trimmed.length === 0) {
-    return _evaluateEmptyAnswer(responseOptions);
+    return _evaluateEmptyAnswer({ responseOptions, theme });
   }
 
   if (responseOptions.type === "boolean") {
@@ -196,22 +214,21 @@ function _evaluateLineAnswer(options: {
     }
     return {
       status: "retry",
-      errorMessage:
-        "|red|That was not a valid response.|reset| Please enter y or n.\n",
+      errorMessage: `${theme.error("That was not a valid response.")} Please enter y or n.\n`,
     };
   }
 
   if (responseOptions.type === "number" && Number.isNaN(Number(trimmed))) {
     return {
       status: "retry",
-      errorMessage:
-        "|red|That was not a valid number.|reset| Please enter a valid number.\n",
+      errorMessage: `${theme.error("That was not a valid number.")} Please enter a valid number.\n`,
     };
   }
 
   const customError = _validateCustomRule({
     rawValue: answer,
     validate: responseOptions.validate,
+    theme,
   });
   return customError !== undefined ?
       { status: "retry", errorMessage: customError }
@@ -223,59 +240,90 @@ async function _promptLineUntilValid(options: {
   session: Readonly<TerminalSession>;
   promptText: string;
   responseOptions: Readonly<RequestTerminalInputResponseOptions>;
+  theme: Readonly<SemanticTheme>;
 }): Promise<string | undefined> {
   const answer = await options.lineReader.readLine(options.promptText);
   const evaluation = _evaluateLineAnswer({
     answer,
     responseOptions: options.responseOptions,
+    theme: options.theme,
   });
   if (evaluation.status === "accepted") {
     return evaluation.value;
   }
-  _writeInlineValidationError(options.session, evaluation.errorMessage);
+  options.session.output.write(evaluation.errorMessage);
   return _promptLineUntilValid(options);
 }
 
-async function _promptWithSession(options: {
+async function _openInputTerminalSession(
+  options: Readonly<RequestTerminalInputOptions>,
+): Promise<TerminalSession | undefined> {
+  const injectedSession =
+    options.terminal ??
+    (options.promptIo ?
+      makeTerminalSessionFromPromptIo({
+        promptIo: options.promptIo,
+        env: options.env,
+      })
+    : undefined);
+  return openTerminalSession({
+    session: injectedSession,
+    interactive: options.interactive,
+    stdin: options.stdin,
+    stdout: options.stdout,
+    stderr: options.stderr,
+    env: options.env,
+    openTty: options.openTty,
+  });
+}
+
+type PromptWithSessionOptions = {
   session: Readonly<TerminalSession>;
   message: string;
   params: Readonly<Record<string, string>>;
   responseOptions: Readonly<RequestTerminalInputResponseOptions>;
   cliName: string;
-}): Promise<string | undefined> {
-  const { session, message, params, responseOptions, cliName } = options;
-  const plainHeading = generateTerminalMessage(message, params, {
-    color: false,
-  });
+  theme: SemanticTheme;
+};
+
+async function _promptWithSession(
+  options: Readonly<PromptWithSessionOptions>,
+): Promise<string | undefined> {
+  const { session, message, params, responseOptions, cliName, theme } = options;
+  const heading = generateTerminalMessage(message, params, { color: false });
   if (responseOptions.choices && responseOptions.choices.length > 0) {
     return _promptViaChoiceMenu({
       session,
-      heading: plainHeading,
+      heading,
       responseOptions,
       cliName,
+      theme,
     });
   }
   if (responseOptions.type === "boolean" && session.isRawModeSupported) {
     return _promptBooleanMenu({
       session,
-      heading: plainHeading,
+      heading,
       defaultValue: responseOptions.defaultValue,
       cliName,
+      theme,
     });
   }
 
   const lineReader = createLineReader({ session, cliName });
+  const promptText = _buildLinePromptText({
+    message,
+    params,
+    responseOptions,
+    theme,
+  });
   try {
     return await _promptLineUntilValid({
       lineReader,
       session,
-      promptText: _buildLinePromptText({
-        message,
-        params,
-        responseOptions,
-        isColorEnabled: session.isColorEnabled,
-      }),
+      promptText,
       responseOptions,
+      theme,
     });
   } finally {
     lineReader.close();
@@ -284,9 +332,9 @@ async function _promptWithSession(options: {
 
 /**
  * Prompts the user for interactive input over the controlling terminal
- * (`/dev/tty`, or an injected `TerminalSession`), delegating `choices` and
- * raw-TTY `boolean` prompts to `requestChoiceMenu` and failing fast in
- * unattended mode instead of hanging on piped `stdin` or writing to `stdout`.
+ * (`/dev/tty`, an injected `TerminalSession`, or `PromptIo`), delegating
+ * `choices` and raw-TTY `boolean` prompts to `requestChoiceMenu` and failing
+ * fast in unattended mode instead of hanging on piped `stdin`.
  *
  * Used by `Acclimate.requestInput` and `promptCLIParam`.
  */
@@ -295,10 +343,7 @@ export async function requestTerminalInput(
 ): Promise<string | undefined> {
   const { message, params, responseOptions } = options;
   const cliName = options.cliName ?? "acclimate";
-  const session = await openTerminalSession({
-    session: options.terminal,
-    interactive: options.interactive,
-  });
+  const session = await _openInputTerminalSession(options);
 
   if (!session) {
     if (!responseOptions.required) {
@@ -315,6 +360,10 @@ export async function requestTerminalInput(
     });
   }
 
+  const theme = makeThemeFromOptions({
+    theme: options.theme,
+    color: session.isColorEnabled,
+  });
   try {
     return await _promptWithSession({
       session,
@@ -322,6 +371,7 @@ export async function requestTerminalInput(
       params,
       responseOptions,
       cliName,
+      theme,
     });
   } finally {
     await session.close();

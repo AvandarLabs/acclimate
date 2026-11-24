@@ -1,6 +1,6 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
-import { Acclimate } from "@/Acclimate";
+import { Acclimate } from "@/Acclimate/Acclimate";
 import type { TerminalSession } from "@/terminalSession/terminalSession.types";
 
 function _createStream(isTty: boolean) {

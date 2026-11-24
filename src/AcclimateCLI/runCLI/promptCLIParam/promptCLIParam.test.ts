@@ -1,6 +1,7 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
 import { CLIError } from "@/CLIError";
+import { createTheme } from "@/theme/createTheme/createTheme";
 import { promptCLIParam } from "./promptCLIParam";
 import type { TerminalSession } from "@/terminalSession/terminalSession.types";
 
@@ -166,5 +167,32 @@ describe("promptCLIParam", () => {
     });
 
     expect(result).toBeUndefined();
+  });
+
+  it("styles prompt messages using the supplied semantic theme", async () => {
+    const mock = _createInteractiveSession({ isRawModeSupported: false });
+    const customTheme = createTheme({
+      color: true,
+      palette: { prompt: "bright_magenta" },
+    });
+
+    mock.input.write("us-west-2\n");
+    const result = await promptCLIParam({
+      cliName: "demo",
+      paramKind: "option",
+      param: {
+        name: "--region",
+        type: "string",
+        required: true,
+        askIfEmpty: { message: "Select region" },
+      },
+      getTerminalSession: () => {
+        return Promise.resolve(mock.session);
+      },
+      theme: customTheme,
+    });
+
+    expect(result).toBe("us-west-2");
+    expect(mock.getOutput()).toContain("\x1b[95mSelect region\x1b[0m");
   });
 });

@@ -2,6 +2,7 @@ import { CLIError } from "@/CLIError";
 import { requestTerminalInput } from "@/requestTerminalInput";
 import type { CLIParamScalarValue } from "@/AcclimateCLI/AcclimateCLI.types";
 import type { TerminalSession } from "@/terminalSession/terminalSession.types";
+import type { SemanticTheme } from "@/theme/theme.types";
 
 /**
  * Parameter metadata needed to prompt or build an unattended missing-value
@@ -22,6 +23,7 @@ type PromptCLIParamOptions = {
   paramKind: "option" | "positional";
   param: Readonly<PromptableCLIParam>;
   getTerminalSession: () => Promise<TerminalSession | undefined>;
+  theme?: SemanticTheme;
 };
 
 function _makeUnattendedMissingParamError(options: {
@@ -58,7 +60,7 @@ function _makeUnattendedMissingParamError(options: {
 export async function promptCLIParam(
   options: Readonly<PromptCLIParamOptions>,
 ): Promise<string | undefined> {
-  const { cliName, paramKind, param, getTerminalSession } = options;
+  const { cliName, paramKind, param, getTerminalSession, theme } = options;
   const terminalSession = await getTerminalSession();
 
   if (!terminalSession) {
@@ -79,7 +81,7 @@ export async function promptCLIParam(
     : `Please enter a value for ${param.name}${description}`;
 
   return requestTerminalInput({
-    message: `|bright_cyan|${baseMessage}|reset|`,
+    message: `|prompt|${baseMessage}|reset|`,
     params: {},
     responseOptions: {
       required: param.required,
@@ -89,5 +91,6 @@ export async function promptCLIParam(
     },
     terminal: terminalSession,
     cliName,
+    theme,
   });
 }

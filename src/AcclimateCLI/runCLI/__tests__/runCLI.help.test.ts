@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createCLI } from "@/AcclimateCLI/createCLI";
 import { runCLI } from "@/AcclimateCLI/runCLI/runCLI";
+import { createTheme } from "@/theme/createTheme/createTheme";
 import type { ActionArgs } from "./runCLI.testHelpers";
 
 const readlineMocks = vi.hoisted(() => {
@@ -192,5 +193,58 @@ describe("runCLI - built-in help", () => {
     await runCLI({ cli, input: [] });
 
     expect(didComplete).toBe(true);
+  });
+
+  it("omits ANSI escapes from help output on redirected stdout, NO_COLOR, or TERM=dumb and applies custom themes on TTY stdout", async () => {
+    const cli = createCLI("demo").description("Demo tool");
+    const customTheme = createTheme({
+      color: true,
+      palette: { accent: "bright_magenta", heading: "bright_blue" },
+    });
+
+    const redirectedStdout = _createMemoryStream();
+    await runCLI({
+      cli,
+      input: ["--help"],
+      stdout: redirectedStdout,
+      env: {},
+      theme: customTheme,
+    });
+    expect(redirectedStdout.getOutput()).not.toContain("\x1b[");
+    expect(redirectedStdout.getOutput()).toContain("demo");
+
+    const noColorStdout = _createMemoryStream();
+    await runCLI({
+      cli,
+      input: ["--help"],
+      stdout: noColorStdout,
+      isStdoutTTY: true,
+      env: { NO_COLOR: "1" },
+      theme: customTheme,
+    });
+    expect(noColorStdout.getOutput()).not.toContain("\x1b[");
+
+    const dumbStdout = _createMemoryStream();
+    await runCLI({
+      cli,
+      input: ["--help"],
+      stdout: dumbStdout,
+      isStdoutTTY: true,
+      env: { TERM: "dumb" },
+      theme: customTheme,
+    });
+    expect(dumbStdout.getOutput()).not.toContain("\x1b[");
+
+    const ttyStdout = _createMemoryStream();
+    await runCLI({
+      cli,
+      input: ["--help"],
+      stdout: ttyStdout,
+      isStdoutTTY: true,
+      env: { TERM: "xterm-256color" },
+      theme: customTheme,
+    });
+    expect(ttyStdout.getOutput()).toContain("\x1b[95mdemo\x1b[0m");
+    expect(ttyStdout.getOutput()).toContain("\x1b[94mUsage\x1b[0m");
   });
 });

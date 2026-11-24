@@ -1,32 +1,53 @@
-import { generateTerminalMessage } from "@/generateTerminalMessage";
+import { makeThemeFromOptions } from "@/theme/makeThemeFromOptions/makeThemeFromOptions";
+import { stripAnsi } from "@/theme/stripAnsi/stripAnsi";
 import type { CLIError } from "@/CLIError";
+import type { TerminalOutputStream } from "@/terminalSession/terminalSession.types";
+import type { ThemeInput } from "@/theme/theme.types";
+
+type FormatCLIErrorOptions = {
+  color?: boolean;
+  theme?: ThemeInput;
+  stream?: TerminalOutputStream;
+  isTTY?: boolean;
+  env?: Readonly<Record<string, string | undefined>>;
+};
 
 /**
- * Formats a `CLIError` for `stderr` output with a red error line, an indented
- * yellow recovery hint when available, and the failing command's usage text.
+ * Formats a `CLIError` for `stderr` output using Acclimate's semantic theme
+ * (`error` for the headline, `warning` for the indented `⚠️` recovery hint)
+ * and appends the command usage sanitized to plain text when color is disabled.
  *
  * Called by `executeCLI` so user input failures render cleanly without a raw
  * stack trace.
  */
 export function formatCLIError(
   error: CLIError,
-  options: Readonly<{ color?: boolean }> = {},
+  options: Readonly<FormatCLIErrorOptions> = {},
 ): string {
-  const colorOptions = { color: options.color ?? true };
+  const theme = makeThemeFromOptions({
+    theme: options.theme,
+    color: options.color,
+    stream: options.stream,
+    isTTY: options.isTTY,
+    env: options.env,
+    defaultColor: true,
+  });
+
   const headerLines = [
-    generateTerminalMessage(`|red|${error.message}|reset|`, {}, colorOptions),
+    theme.error(error.message),
     error.hint !== undefined ?
-      generateTerminalMessage(
-        `  |yellow|⚠️ ${error.hint}|reset|`,
-        {},
-        colorOptions,
-      )
+      `  ${theme.warning(`⚠️ ${error.hint}`)}`
     : undefined,
   ].filter((line): line is string => {
     return line !== undefined;
   });
 
-  return error.usage === undefined ?
+  const usageBlock =
+    error.usage === undefined ? undefined
+    : theme.isColorEnabled ? error.usage
+    : stripAnsi(error.usage);
+
+  return usageBlock === undefined ?
       headerLines.join("\n")
-    : `${headerLines.join("\n")}\n\n${error.usage}`;
+    : `${headerLines.join("\n")}\n\n${usageBlock}`;
 }
