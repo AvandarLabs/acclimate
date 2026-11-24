@@ -4,6 +4,7 @@
  */
 import type {
   CLICommandName,
+  CLIExample,
   CLIFullOptionName,
   CLIOptionAlias,
   CLIOptionParam,
@@ -17,6 +18,7 @@ export type {
   CLIBaseParam,
   CLIBooleanParam,
   CLICommandName,
+  CLIExample,
   CLIFullOptionName,
   CLINumberParam,
   CLIOptionAlias,
@@ -32,6 +34,7 @@ export type {
   CLIVariadicNumberParam,
   CLIVariadicPositionalParam,
   CLIVariadicStringParam,
+  OutputStream,
   ValueOfParam,
 } from "./CLIParam.types";
 
@@ -98,6 +101,12 @@ export type CLIState<
   /** The description of the CLI. */
   description?: string;
 
+  /** Custom usage synopsis overriding the auto-generated synopsis line. */
+  usage?: string;
+
+  /** Worked command examples shown in generated help output. */
+  examples: readonly CLIExample[];
+
   /** The commands of the CLI. */
   commands: TCommands;
 
@@ -117,7 +126,7 @@ export type CLIState<
     args: Simplify<
       FullCLIArgValues<TPositionalParams, TOptionParams, TGlobalOptionParams>
     >,
-  ) => void;
+  ) => void | Promise<void>;
 };
 
 /** Immutable fluent builder for defining an Acclimate CLI or sub-command. */
@@ -154,13 +163,33 @@ export type IAcclimateCLI<
     TCommands
   >;
 
+  /** Override the auto-generated usage synopsis line in help output. */
+  usage: (
+    usage: string,
+  ) => IAcclimateCLI<
+    TPositionalParams,
+    TOptionParams,
+    TGlobalOptionParams,
+    TCommands
+  >;
+
+  /** Add a worked example invocation displayed in help output. */
+  addExample: (
+    example: CLIExample,
+  ) => IAcclimateCLI<
+    TPositionalParams,
+    TOptionParams,
+    TGlobalOptionParams,
+    TCommands
+  >;
+
   /** Set the action invoked when the CLI executes with parsed arguments. */
   action: (
     action: (
       args: Simplify<
         FullCLIArgValues<TPositionalParams, TOptionParams, TGlobalOptionParams>
       >,
-    ) => void,
+    ) => void | Promise<void>,
   ) => IAcclimateCLI<
     TPositionalParams,
     TOptionParams,

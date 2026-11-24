@@ -41,6 +41,48 @@ describe("CLIError", () => {
 
     expect(error.code).toBe("invalid_positional_arg_config");
   });
+
+  it("formats unknownOption with a clear message and cliName", () => {
+    const error = CLIError.unknownOption({
+      cliName: "avandar-lint coverage",
+      optionName: "--bogus",
+    });
+
+    expect(error.code).toBe("unknown_option");
+    expect(error.cliName).toBe("avandar-lint coverage");
+    expect(error.message).toBe(
+      '❌ Error running avandar-lint coverage: Unknown option "--bogus"',
+    );
+  });
+
+  it("attaches commandPath, hint, and usage immutably via withHelpContext", () => {
+    const original = CLIError.unknownOption({
+      cliName: "coverage",
+      optionName: "--bogus",
+    });
+
+    const enriched = original.withHelpContext({
+      commandPath: ["avandar-lint", "coverage"],
+      hint: "Run avandar-lint coverage --help to see available options and usage.",
+      usage:
+        "avandar-lint coverage\n\nUsage\n  avandar-lint coverage [options]",
+    });
+
+    expect(enriched).toBeInstanceOf(CLIError);
+    expect(enriched).not.toBe(original);
+    expect(enriched.code).toBe("unknown_option");
+    expect(enriched.cliName).toBe("avandar-lint coverage");
+    expect(enriched.message).toBe(
+      '❌ Error running avandar-lint coverage: Unknown option "--bogus"',
+    );
+    expect(enriched.commandPath).toEqual(["avandar-lint", "coverage"]);
+    expect(enriched.hint).toBe(
+      "Run avandar-lint coverage --help to see available options and usage.",
+    );
+    expect(enriched.usage).toContain("avandar-lint coverage [options]");
+    expect(original.hint).toBeUndefined();
+    expect(original.usage).toBeUndefined();
+  });
 });
 
 describe("AcclimateCLI.addPositionalArg", () => {
@@ -273,5 +315,50 @@ describe("AcclimateCLI.addPositionalArg", () => {
 
     expect(numericCLI.state.positionalArgs).toHaveLength(1);
     expect(booleanCLI.state.positionalArgs).toHaveLength(1);
+  });
+});
+
+describe("AcclimateCLI metadata builders", () => {
+  it("stores custom usage text immutably without mutating the original CLI", () => {
+    const baseCLI = createCLI("demo").description("Demo tool");
+    const customCLI = baseCLI.usage("demo [files...] [options]");
+
+    expect(baseCLI.state.usage).toBeUndefined();
+    expect(customCLI.state.usage).toBe("demo [files...] [options]");
+  });
+
+  it("appends string and structured examples immutably in declaration order", () => {
+    const baseCLI = createCLI("demo");
+    const withOne = baseCLI.addExample("demo src/");
+    const withTwo = withOne.addExample({
+      command: "demo --format json src/",
+      description: "Emit JSON output",
+    });
+
+    expect(baseCLI.state.examples).toEqual([]);
+    expect(withOne.state.examples).toEqual(["demo src/"]);
+    expect(withTwo.state.examples).toEqual([
+      "demo src/",
+      { command: "demo --format json src/", description: "Emit JSON output" },
+    ]);
+  });
+
+  it("preserves argument type inference across usage, addExample, and async actions", () => {
+    const cli = createCLI("demo")
+      .addPositionalArg({
+        name: "paths",
+        type: "string",
+        required: false,
+        variadic: true,
+      })
+      .usage("demo [paths...]")
+      .addExample("demo src/a.ts")
+      .action(async (args) => {
+        expectTypeOf(args.paths).toEqualTypeOf<string[]>();
+        await Promise.resolve();
+      });
+
+    expect(cli.state.usage).toBe("demo [paths...]");
+    expect(cli.state.examples).toHaveLength(1);
   });
 });

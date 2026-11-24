@@ -47,7 +47,13 @@ type CLIErrorInfo =
 /** Machine-readable error code reported by `CLIError` instances. */
 export type CLIErrorCode = CLIErrorInfo["code"];
 
-type CLIErrorOptions = { cliName: string; message: string } & CLIErrorInfo;
+type CLIErrorOptions = {
+  cliName: string;
+  message: string;
+  commandPath?: readonly string[];
+  hint?: string;
+  usage?: string;
+} & CLIErrorInfo;
 
 /**
  * Structured error thrown when CLI configuration, argument parsing, or value
@@ -57,6 +63,20 @@ type CLIErrorOptions = { cliName: string; message: string } & CLIErrorInfo;
 export class CLIError extends Error {
   /** Machine-readable code identifying the CLI failure category. */
   readonly code: CLIErrorCode;
+
+  /** Display name or invocation path of the CLI that failed. */
+  readonly cliName: string;
+
+  /** Invocation token path leading to the failing command, when known. */
+  readonly commandPath: string[] | undefined;
+
+  /** Actionable recovery hint for stderr output, when available. */
+  readonly hint: string | undefined;
+
+  /** Rendered usage text for the failing command, when available. */
+  readonly usage: string | undefined;
+
+  private readonly _options: CLIErrorOptions;
 
   /** Build an error when a parsed parameter value fails validation. */
   static invalidCLIParamValue(options: {
@@ -119,6 +139,7 @@ export class CLIError extends Error {
     });
   }
 
+  /** Build an error when an unrecognized option flag is supplied. */
   static unknownOption(options: {
     cliName: string;
     optionName: string;
@@ -126,7 +147,7 @@ export class CLIError extends Error {
   }): CLIError {
     return new CLIError({
       cliName: options.cliName,
-      message: options.message ?? `Option "${options.optionName}" not found`,
+      message: options.message ?? `Unknown option "${options.optionName}"`,
       code: "unknown_option",
       details: { optionName: options.optionName },
     });
@@ -185,5 +206,34 @@ export class CLIError extends Error {
   constructor(options: CLIErrorOptions) {
     super(`❌ Error running ${options.cliName}: ${options.message}`);
     this.code = options.code;
+    this.cliName = options.cliName;
+    this.commandPath =
+      options.commandPath !== undefined ? [...options.commandPath] : undefined;
+    this.hint = options.hint;
+    this.usage = options.usage;
+    this._options = options;
+  }
+
+  /**
+   * Return a new `CLIError` with command path, recovery hint, and usage text
+   * attached for user-facing `stderr` rendering. Called by
+   * `attachCLIErrorHelpContext` when a CLI failure occurs on a resolved
+   * command.
+   */
+  withHelpContext(
+    context: Readonly<{
+      commandPath: readonly string[];
+      hint: string;
+      usage: string;
+    }>,
+  ): CLIError {
+    const commandLabel = context.commandPath.join(" ");
+    return new CLIError({
+      ...this._options,
+      cliName: commandLabel || this.cliName,
+      commandPath: [...context.commandPath],
+      hint: context.hint,
+      usage: context.usage,
+    });
   }
 }

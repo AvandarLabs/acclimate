@@ -33,10 +33,14 @@ Acclimate.run(cli);
 Public exports from `@avandar/acclimate`:
 
 - `Acclimate`
-- `CLIError` (with `error.code` of type `CLIErrorCode`)
-- Types: `IAcclimateCLI`, `AnyCLI`, `CLIParamScalarValue`, `CLIParamDataType`,
-  `CLIPositionalParam`, `CLIScalarPositionalParam`, `CLIVariadicPositionalParam`,
-  `CLIOptionParam`, `CLICommandName`, `CLIFullOptionName`, `CLIOptionAlias`
+- `executeCLI`
+- `generateHelpText`
+- `CLIError` (with `error.code` of type `CLIErrorCode`, plus `cliName`,
+  `commandPath`, `hint`, and `usage`)
+- Types: `IAcclimateCLI`, `AnyCLI`, `CLIExample`, `OutputStream`,
+  `CLIParamScalarValue`, `CLIParamDataType`, `CLIPositionalParam`,
+  `CLIScalarPositionalParam`, `CLIVariadicPositionalParam`, `CLIOptionParam`,
+  `CLICommandName`, `CLIFullOptionName`, `CLIOptionAlias`
 
 ### `Acclimate`
 
@@ -50,10 +54,40 @@ Acclimate.createCLI(name: string): IAcclimateCLI
 
 #### `Acclimate.run(cli)`
 
-Run a CLI instance using `process.argv.slice(2)`.
+Run a CLI instance using `process.argv.slice(2)`. Handles built-in `-h`/`--help`
+on `stdout` (exit code `0`) and formats `CLIError` failures (such as unknown
+flags or missing required arguments) with a recovery hint and usage on `stderr`
+(setting `process.exitCode = 1`).
 
 ```ts
-Acclimate.run(cli: IAcclimateCLI): void
+Acclimate.run(cli: AnyCLI): void
+```
+
+#### `executeCLI(options)`
+
+Async execution boundary for embedding or testing a CLI with injectable
+`input`, `stdout`, `stderr`, and `onExitCode`. Resolves to `0` on success or
+help output, and `1` on error.
+
+```ts
+executeCLI(options: {
+  cli: AnyCLI;
+  input: readonly string[];
+  stdout?: OutputStream;
+  stderr?: OutputStream;
+  onExitCode?: (exitCode: number) => void;
+}): Promise<number>
+```
+
+#### `generateHelpText(cli, options?)`
+
+Render formatted usage and help text for a CLI or sub-command.
+
+```ts
+generateHelpText(
+  cli: IAcclimateCLI,
+  options?: { commandPath?: readonly string[] },
+): string
 ```
 
 ### `IAcclimateCLI` (CLI builder)
@@ -67,13 +101,32 @@ instance with updated configuration.
 cli.description(description: string): IAcclimateCLI
 ```
 
+#### `cli.usage(usage)`
+
+Override the auto-generated `Usage` synopsis line in help output.
+
+```ts
+cli.usage(usage: string): IAcclimateCLI
+```
+
+#### `cli.addExample(example)`
+
+Add a worked example shown in the `Examples` section of help output.
+
+```ts
+cli.addExample(
+  example: string | { command: string; description?: string },
+): IAcclimateCLI
+```
+
 #### `cli.action(action)`
 
-Set the function executed when the CLI matches (after parsing).
+Set the function executed when the CLI matches (after parsing). Supports both
+synchronous and `async` callbacks.
 
 ```ts
 cli.action(
-  action: (args: FullCLIArgValues<...>) => void,
+  action: (args: FullCLIArgValues<...>) => void | Promise<void>,
 ): IAcclimateCLI
 ```
 
@@ -165,9 +218,18 @@ See [docs/argument-parsing.md](docs/argument-parsing.md) for full details.
   verbatim as a positional argument (never as an option or sub-command).
 - **Option keys in `action(args)`**: option names are camel-cased, so
   `--dry-run` becomes `dryRun`.
+- **Built-in help (`-h` / `--help`)**: supported automatically at root and
+  every sub-command, taking precedence over validation, prompts, other flag
+  errors, and command actions (zero side effects). Prints complete usage
+  (purpose, synopsis, positional args, options, inherited global options,
+  choices, defaults, examples, and sub-commands) to `stdout` and exits `0`.
+  Tokens after `--` pass through verbatim as positional args.
 - **Errors**: unknown flags before `--`, missing option values, missing required
   args/options, invalid numbers, values outside `choices`, and failed validators
-  throw `CLIError` with a machine-readable `code`.
+  fail with `CLIError` (`code`, `commandPath`, `hint`, `usage`). When run via
+  `Acclimate.run(cli)` or `executeCLI`, errors print a red message, an indented
+  yellow `Run <cmd> --help...` recovery hint, and command usage to `stderr`,
+  leave `stdout` empty, and exit nonzero (`process.exitCode = 1`).
 
 ## Prerequisites
 
@@ -337,13 +399,12 @@ Acclimate.run(root);
 
 ## To do
 
-- [ ] When a required option or positional arg is missing this should throw a clean user-friendly error message, rather than a stack trace. This is not an internal error.
+- [x] When a required option or positional arg is missing this should throw a clean user-friendly error message, rather than a stack trace. This is not an internal error.
 - [ ] Add semantic functions such as Acclimate.printSuccess, .printInfo, .printWarn and .printError
 - [ ] Allow user to configure semantic colors with Acclimate.setTheme()
 - [ ] Add a beforeAll() function to handle global args
 - [ ] Add semantic arguments: e.g. email (which has a default validator)
-- [ ] Add default `help` command and `--help` option. This should show the CLI
-      description and all param documentation.
+- [x] Add built-in `-h` / `--help` handling across root and sub-commands showing description, usage synopsis, parameters, choices, defaults, and examples.
 - [x] Make the `description` actually get printed.
 - [x] Show all CLI param descriptions if command is run with no arguments or if
       there is a param-related error.

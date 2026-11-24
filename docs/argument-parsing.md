@@ -93,13 +93,52 @@ element of a variadic positional argument:
    single-element array; an empty answer falls back to `defaultValue` when
    configured or `[]` when optional.
 
-## Help Text and Error Codes
+## Built-In Help (`-h` / `--help`)
 
-- `generateHelpText` formats variadic positional arguments with a trailing
-  `...` on the name and `[]` on the type (for example
-  `paths... (string[]) optional`).
-- `CLIError` is exported from `@avandar/acclimate` and exposes a machine-readable
-  `code` property (`invalid_positional_arg_config`, `too_many_positional_args`,
-  `missing_required_positional_arg`, `missing_required_option`,
-  `missing_option_value`, `unknown_option`, `invalid_cli_param_value`,
-  `unknown_command`, `already_run`, `unknown_error`).
+Acclimate handles `-h` and `--help` natively at the root CLI and every nested
+sub-command:
+
+- **Precedence:** Built-in `-h` / `--help` takes precedence over required
+  argument and option validation, value parsers/validators, interactive
+  `askIfEmpty` prompts, other flag errors (`unknown_option`,
+  `missing_option_value`), and command actions (zero side effects).
+- **Output and exit status:** Help text is written to `stdout` and resolves
+  cleanly with exit code `0`.
+- **Sub-command context:** Invoking `<root> <subcommand> --help` prints the
+  matched sub-command's help using its full command path (`<root> <subcommand>`)
+  and includes all inherited parent global options.
+- **End-of-options pass-through:** `-h` and `--help` appearing after `--` are
+  passed verbatim as positional arguments rather than triggering help. Inline
+  option values such as `--format=--help` are likewise passed as values.
+- **Collision safety:** If a command explicitly registers `-h` as an alias for
+  another option (such as `--host, -h`), `-h` routes to that option while
+  `--help` remains built-in. If a command explicitly registers `--help`,
+  Acclimate defers to that declaration.
+
+## Help Text, Metadata, and Error Reporting
+
+- `generateHelpText(cli, { commandPath? })` renders:
+  - Command name or full invocation path and purpose (`description`).
+  - `Usage` synopsis, auto-generated from sub-commands (`<command>` /
+    `[command]`), positional arguments (`<arg>`, `[arg]`, `<arg...>`,
+    `[arg...]`), and `[options]`, or overridden via `cli.usage(...)`.
+  - `Positional Arguments`, `Options` (including built-in `--help, -h` at level
+    1 unless overridden), and `Global Options` (including inherited parent
+    globals on sub-commands), displaying variadic `...` / `[]` markers,
+    `[choices: a | b]`, and `[default: ...]`.
+  - `Examples` declared via `cli.addExample(example)` (either a command string
+    or `{ command, description }`).
+  - Alphabetically sorted `Commands`.
+- `CLIError` is exported from `@avandar/acclimate` and exposes:
+  - `code: CLIErrorCode` (`invalid_positional_arg_config`,
+    `too_many_positional_args`, `missing_required_positional_arg`,
+    `missing_required_option`, `missing_option_value`, `unknown_option`,
+    `invalid_cli_param_value`, `unknown_command`, `already_run`,
+    `unknown_error`).
+  - `cliName`, optional `commandPath`, optional `hint` (`Run <cmd> --help to
+see available options and usage.`), and optional `usage`.
+- `executeCLI` (used by `Acclimate.run(cli)` and exported for programmatic
+  testing/embedding) writes `CLIError` output formatted by `formatCLIError`
+  (red error line, indented yellow `⚠️` recovery hint, and full command usage)
+  to `stderr`, leaves `stdout` empty, omits raw stack traces for CLI input
+  errors, and sets `process.exitCode = 1` without calling `process.exit()`.

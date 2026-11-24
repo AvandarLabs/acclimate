@@ -26,6 +26,22 @@ export type CLIFullOptionName = `--${string}`;
 /** Option alias starting with `-` or `--`. */
 export type CLIOptionAlias = `--${string}` | `-${string}`;
 
+/** Example invocation displayed in a command's generated help text. */
+export type CLIExample =
+  | string
+  | {
+      /** Example shell command line. */
+      command: string;
+
+      /** Optional explanation of what the example demonstrates. */
+      description?: string;
+    };
+
+/** Minimal writable stream contract used for stdout/stderr injection. */
+export type OutputStream = {
+  write: (chunk: string) => unknown;
+};
+
 /** Fields shared by all scalar and variadic CLI parameter configurations. */
 export type CLIBaseParam<PName extends string> = {
   /** The name of the parameter. */

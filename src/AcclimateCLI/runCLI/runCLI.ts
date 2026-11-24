@@ -3,6 +3,7 @@ import { match } from "ts-pattern";
 import { generateHelpText } from "@/AcclimateCLI/generateHelpText/generateHelpText";
 import { CLIError } from "@/CLIError";
 import { requestTerminalInput } from "@/requestTerminalInput";
+import { attachCLIErrorHelpContext } from "./attachCLIErrorHelpContext";
 import { parseCLIParamValue } from "./parseCLIParamValue/parseCLIParamValue";
 import { tokenizeCLIInput } from "./tokenizeCLIInput/tokenizeCLIInput";
 import type {
@@ -14,6 +15,7 @@ import type {
   CLIPositionalParam,
   CLIScalarPositionalParam,
   CLIVariadicPositionalParam,
+  OutputStream,
 } from "@/AcclimateCLI/AcclimateCLI.types";
 
 type PromptableParam = {
@@ -29,7 +31,7 @@ type RuntimeTargetCLIState = {
   positionalArgs: readonly CLIPositionalParam[];
   optionArgs: Record<CLIFullOptionName, CLIOptionParam>;
   globalOptionArgs: Record<CLIFullOptionName, CLIOptionParam>;
-  action?: (args: Record<string, CLIParamDataType>) => void;
+  action?: (args: Record<string, CLIParamDataType>) => void | Promise<void>;
 };
 
 async function _askForValue(
@@ -278,50 +280,91 @@ async function _parseOptionGroup(options: {
   return Object.fromEntries(entries);
 }
 
-/**
- * Parses raw argv tokens against a CLI definition, runs interactive prompts
- * for any missing `askIfEmpty` parameters, validates all positional and option
- * values, and invokes the matched command's action (or prints help text when
- * no action is configured).
- */
-export async function runCLI(options: {
-  input: readonly string[];
-  cli: AnyCLI;
-}): Promise<void> {
-  const { targetCLI, rawPositionalArgs, rawOptionArgs, rawGlobalOptionArgs } =
-    tokenizeCLIInput({
-      cli: options.cli,
-      input: options.input,
-    });
+type ParseTargetArgsOptions = {
+  cliName: string;
+  targetState: Readonly<RuntimeTargetCLIState>;
+  rawPositionalArgs: readonly string[];
+  rawOptionArgs: Readonly<Record<CLIFullOptionName, string>>;
+  rawGlobalOptionArgs: Readonly<Record<CLIFullOptionName, string>>;
+};
 
-  const cliName = targetCLI.getName();
-  // AnyCLI erases builder generics; narrow once at the execution boundary.
-  const targetState = targetCLI.state as RuntimeTargetCLIState;
-
+async function _parseTargetArgs(
+  options: Readonly<ParseTargetArgsOptions>,
+): Promise<Record<string, CLIParamDataType>> {
+  const { cliName, targetState } = options;
   const parsedPositionalArgs = await _parsePositionalArgs({
     cliName,
     positionalArgs: targetState.positionalArgs,
-    rawPositionalArgs,
+    rawPositionalArgs: options.rawPositionalArgs,
   });
   const parsedOptionArgs = await _parseOptionGroup({
     cliName,
     optionDefs: Object.values(targetState.optionArgs),
-    rawOptions: rawOptionArgs,
+    rawOptions: options.rawOptionArgs,
   });
   const parsedGlobalOptionArgs = await _parseOptionGroup({
     cliName,
     optionDefs: Object.values(targetState.globalOptionArgs),
-    rawOptions: rawGlobalOptionArgs,
+    rawOptions: options.rawGlobalOptionArgs,
   });
 
-  if (targetState.action) {
-    targetState.action({
-      ...parsedPositionalArgs,
-      ...parsedOptionArgs,
-      ...parsedGlobalOptionArgs,
-    });
+  return {
+    ...parsedPositionalArgs,
+    ...parsedOptionArgs,
+    ...parsedGlobalOptionArgs,
+  };
+}
+
+/**
+ * Runs a CLI against raw `argv` tokens, writing built-in `-h`/`--help` or
+ * actionless usage to `stdout` and awaiting the matched command's action.
+ *
+ * Called by `executeCLI` for process-boundary execution and by programmatic
+ * callers that want structured `CLIError` rejections.
+ */
+export async function runCLI(options: {
+  input: readonly string[];
+  cli: AnyCLI;
+  stdout?: OutputStream;
+}): Promise<void> {
+  const stdout = options.stdout ?? process.stdout;
+  const {
+    targetCLI,
+    commandPath,
+    isHelpRequested,
+    rawPositionalArgs,
+    rawOptionArgs,
+    rawGlobalOptionArgs,
+  } = tokenizeCLIInput({
+    cli: options.cli,
+    input: options.input,
+  });
+
+  if (isHelpRequested) {
+    stdout.write(`${generateHelpText(targetCLI, { commandPath })}\n`);
     return;
   }
 
-  console.log(generateHelpText(targetCLI));
+  // AnyCLI erases builder generics; narrow once at the execution boundary.
+  const targetState = targetCLI.state as RuntimeTargetCLIState;
+
+  const parsedArgs = await _parseTargetArgs({
+    cliName: commandPath.join(" "),
+    targetState,
+    rawPositionalArgs,
+    rawOptionArgs,
+    rawGlobalOptionArgs,
+  }).catch((error: unknown) => {
+    if (error instanceof CLIError && error.usage === undefined) {
+      throw attachCLIErrorHelpContext({ cli: targetCLI, commandPath, error });
+    }
+    throw error;
+  });
+
+  if (targetState.action) {
+    await targetState.action(parsedArgs);
+    return;
+  }
+
+  stdout.write(`${generateHelpText(targetCLI, { commandPath })}\n`);
 }

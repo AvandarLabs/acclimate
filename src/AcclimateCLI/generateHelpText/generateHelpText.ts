@@ -2,6 +2,7 @@ import { generateTerminalMessage } from "@/generateTerminalMessage";
 import type {
   AnyCLI,
   CLICommandName,
+  CLIExample,
   CLIFullOptionName,
   CLIOptionParam,
   CLIParamScalarValue,
@@ -12,9 +13,11 @@ import type {
 import type { EmptyObject } from "type-fest";
 
 type SectionTitle =
+  | "Usage"
   | "Positional Arguments"
   | "Options"
   | "Global Options"
+  | "Examples"
   | "Commands";
 
 type HelpParam = {
@@ -24,11 +27,31 @@ type HelpParam = {
   required: boolean;
   variadic?: boolean;
   aliases?: readonly string[];
+  choices?: readonly CLIParamScalarValue[];
   defaultValue?:
     | CLIParamScalarValue
     | readonly string[]
     | readonly number[]
     | readonly boolean[];
+};
+
+type RuntimeHelpCLIState = {
+  aliases: Record<string, CLIFullOptionName>;
+  description?: string;
+  usage?: string;
+  examples: readonly CLIExample[];
+  positionalArgs: readonly HelpParam[];
+  optionArgs: Record<CLIFullOptionName, CLIOptionParam>;
+  globalOptionArgs: Record<CLIFullOptionName, CLIOptionParam>;
+  commands: Record<CLICommandName, AnyCLI>;
+  action?: unknown;
+};
+
+type BuildHelpLinesOptions = {
+  displayName: string;
+  state: Readonly<RuntimeHelpCLIState>;
+  sortedCommands: ReadonlyArray<[string, AnyCLI]>;
+  level: 1 | 2;
 };
 
 function _formatSectionTitle(title: SectionTitle): string {
@@ -39,6 +62,10 @@ function _formatParamLine(param: Readonly<HelpParam>): string {
   const description = param.description ?? "No description";
   const requiredLabel =
     param.required ? "|red|required|reset|" : "|gray|optional|reset|";
+  const choicesLabel =
+    param.choices && param.choices.length > 0 ?
+      `|gray|[choices: ${param.choices.join(" | ")}]|reset|`
+    : undefined;
   const defaultLabel =
     param.defaultValue !== undefined ?
       `|gray|[default: ${JSON.stringify(param.defaultValue)}]|reset|`
@@ -51,8 +78,9 @@ function _formatParamLine(param: Readonly<HelpParam>): string {
 
   const segments = [
     `  |bright_white|${displayName}|reset|`,
-    `(${typeLabel})|reset| ${requiredLabel}`,
+    `(${typeLabel}) ${requiredLabel}`,
     `- |gray|${description}|reset|`,
+    choicesLabel,
     defaultLabel,
   ].filter(Boolean);
 
@@ -70,6 +98,73 @@ function _formatSection(
   return [_formatSectionTitle(title), ...params.map(_formatParamLine)];
 }
 
+function _getBuiltinHelpOption(
+  state: Readonly<RuntimeHelpCLIState>,
+): HelpParam | undefined {
+  const hasExplicitHelp =
+    state.optionArgs["--help"] !== undefined ||
+    state.globalOptionArgs["--help"] !== undefined ||
+    state.aliases["--help"] !== undefined;
+
+  return hasExplicitHelp ? undefined : (
+      {
+        name: "--help",
+        aliases: state.aliases["-h"] !== undefined ? [] : ["-h"],
+        type: "boolean",
+        required: false,
+        description: "Show help for this command",
+      }
+    );
+}
+
+type BuildSynopsisOptions = {
+  displayName: string;
+  state: Readonly<RuntimeHelpCLIState>;
+  hasCommands: boolean;
+  hasAnyOptions: boolean;
+};
+
+function _buildSynopsis(options: Readonly<BuildSynopsisOptions>): string {
+  const { displayName, state, hasCommands, hasAnyOptions } = options;
+  if (state.usage !== undefined) {
+    return state.usage;
+  }
+
+  const commandToken =
+    !hasCommands ? undefined
+    : state.action === undefined && state.positionalArgs.length === 0 ?
+      "<command>"
+    : "[command]";
+  const positionalTokens = state.positionalArgs.map((param) => {
+    const nameToken = param.variadic === true ? `${param.name}...` : param.name;
+    return param.required ? `<${nameToken}>` : `[${nameToken}]`;
+  });
+  const optionsToken = hasAnyOptions ? "[options]" : undefined;
+
+  return [displayName, commandToken, ...positionalTokens, optionsToken]
+    .filter((token): token is string => {
+      return token !== undefined;
+    })
+    .join(" ");
+}
+
+function _formatExamplesSection(examples: readonly CLIExample[]): string[] {
+  if (examples.length === 0) {
+    return [];
+  }
+
+  const formattedExamples = examples.map((example) => {
+    const command = typeof example === "string" ? example : example.command;
+    const description =
+      typeof example === "string" ? undefined : example.description;
+    return description !== undefined ?
+        `  |bright_white|${command}|reset| - |gray|${description}|reset|`
+      : `  |bright_white|${command}|reset|`;
+  });
+
+  return [_formatSectionTitle("Examples"), ...formattedExamples];
+}
+
 function _formatCommandBullets(
   commands: ReadonlyArray<{ name: string; description?: string }>,
 ): string[] {
@@ -84,7 +179,7 @@ function _formatCommandBullets(
 
 function _buildCommandSection(options: {
   sortedCommands: ReadonlyArray<[string, AnyCLI]>;
-  level: number;
+  level: 1 | 2;
 }): string[] {
   const { sortedCommands, level } = options;
   if (sortedCommands.length === 0) {
@@ -108,78 +203,86 @@ function _buildCommandSection(options: {
   return [_formatSectionTitle("Commands")];
 }
 
-function _buildHelpLines(options: {
-  name: string;
+function _buildHeaderLines(options: {
+  displayName: string;
   description: string | undefined;
-  positionalParams: readonly HelpParam[];
-  optionParams: readonly HelpParam[];
-  globalOptionParams: readonly HelpParam[];
-  sortedCommands: ReadonlyArray<[string, AnyCLI]>;
-  level: 1 | 2;
 }): string[] {
-  const {
-    name,
-    description,
-    positionalParams,
-    optionParams,
-    globalOptionParams,
-    sortedCommands,
-    level,
-  } = options;
-  const headerLines = [
-    `|bright_cyan|${name}|reset|`,
-    description !== undefined ? `  |gray|${description}|reset|` : undefined,
+  return [
+    `|bright_cyan|${options.displayName}|reset|`,
+    options.description !== undefined ?
+      `  |gray|${options.description}|reset|`
+    : undefined,
   ].filter((line): line is string => {
     return line !== undefined;
   });
+}
+
+function _buildSubCommandLines(
+  sortedCommands: ReadonlyArray<[string, AnyCLI]>,
+): string[] {
+  return sortedCommands.flatMap(([, commandCLI]) => {
+    const subCommandState = commandCLI.state as RuntimeHelpCLIState;
+    return [
+      "",
+      ..._generateHelpTextHelper({
+        displayName: commandCLI.getName(),
+        state: subCommandState,
+        level: 2,
+      }).split("\n"),
+    ];
+  });
+}
+
+function _buildHelpLines(options: Readonly<BuildHelpLinesOptions>): string[] {
+  const { displayName, state, sortedCommands, level } = options;
+  const builtinHelpOption =
+    level === 1 ? _getBuiltinHelpOption(state) : undefined;
+  const optionParams: HelpParam[] = [
+    ...Object.values(state.optionArgs),
+    ...(builtinHelpOption ? [builtinHelpOption] : []),
+  ];
+  const globalOptionParams = Object.values(state.globalOptionArgs);
+  const hasAnyOptions =
+    optionParams.length > 0 || globalOptionParams.length > 0;
+  const usageSection =
+    level === 1 ?
+      [
+        _formatSectionTitle("Usage"),
+        `  ${_buildSynopsis({
+          displayName,
+          state,
+          hasCommands: sortedCommands.length > 0,
+          hasAnyOptions,
+        })}`,
+      ]
+    : [];
 
   const sections = [
-    _formatSection("Positional Arguments", positionalParams),
+    usageSection,
+    _formatSection("Positional Arguments", state.positionalArgs),
     _formatSection("Options", optionParams),
     _formatSection("Global Options", globalOptionParams),
+    level === 1 ? _formatExamplesSection(state.examples) : [],
     _buildCommandSection({ sortedCommands, level }),
   ].filter((section) => {
     return section.length > 0;
   });
 
-  const subCommandLines =
-    level === 1 ?
-      sortedCommands.flatMap(([, commandCLI]) => {
-        const subCommandState = commandCLI.state as RuntimeHelpCLIState;
-        return [
-          "",
-          ..._generateHelpTextHelper({
-            name: commandCLI.getName(),
-            state: subCommandState,
-            level: 2,
-          }).split("\n"),
-        ];
-      })
-    : [];
-
   return [
-    ...headerLines,
+    ..._buildHeaderLines({ displayName, description: state.description }),
     ...sections.flatMap((section) => {
       return ["", ...section];
     }),
-    ...subCommandLines,
+    ...(level === 1 ? _buildSubCommandLines(sortedCommands) : []),
   ];
 }
 
-type RuntimeHelpCLIState = {
-  description?: string;
-  positionalArgs: readonly HelpParam[];
-  optionArgs: Record<CLIFullOptionName, CLIOptionParam>;
-  globalOptionArgs: Record<CLIFullOptionName, CLIOptionParam>;
-  commands: Record<CLICommandName, AnyCLI>;
-};
-
 function _generateHelpTextHelper(options: {
-  name: string;
+  displayName: string;
   state: Readonly<RuntimeHelpCLIState>;
   level: 1 | 2;
 }): string {
-  const { name, state, level } = options;
+  const { displayName, state, level } = options;
   const sortedCommands = Object.entries(state.commands).sort(
     ([firstName], [secondName]) => {
       return firstName.localeCompare(secondName);
@@ -187,11 +290,8 @@ function _generateHelpTextHelper(options: {
   );
 
   const lines = _buildHelpLines({
-    name,
-    description: state.description,
-    positionalParams: state.positionalArgs,
-    optionParams: Object.values(state.optionArgs),
-    globalOptionParams: Object.values(state.globalOptionArgs),
+    displayName,
+    state,
     sortedCommands,
     level,
   });
@@ -205,12 +305,13 @@ function _generateHelpTextHelper(options: {
 }
 
 /**
- * Generates formatted ANSI help text describing a CLI's name, description,
- * positional arguments (including variadic `...` markers), options, global
- * options, and sub-commands.
+ * Generates formatted ANSI help text describing a CLI's name or full command
+ * path, purpose, usage synopsis, positional arguments, options (including
+ * built-in `--help, -h`), global options, choices, defaults, examples, and
+ * sub-commands.
  *
- * Called by `runCLI` when a CLI without an action is executed, and exported
- * for direct help rendering and testing.
+ * Used for `-h`/`--help` and error usage output (for example from `runCLI` or
+ * custom help inspection in tests).
  */
 export function generateHelpText<
   TPositionalParams extends
@@ -228,12 +329,21 @@ export function generateHelpText<
     TGlobalOptionParams,
     TCommands
   >,
+  options?: { commandPath?: readonly string[] },
 ): string {
+  const displayName =
+    options?.commandPath && options.commandPath.length > 0 ?
+      options.commandPath.join(" ")
+    : cli.getName();
+
   return generateTerminalMessage(
     _generateHelpTextHelper({
-      name: cli.getName(),
+      displayName,
       state: {
+        aliases: cli.state.aliases as Record<string, CLIFullOptionName>,
         description: cli.state.description,
+        usage: cli.state.usage,
+        examples: cli.state.examples,
         positionalArgs: cli.state.positionalArgs,
         optionArgs: cli.state.optionArgs as Record<
           CLIFullOptionName,
@@ -244,6 +354,7 @@ export function generateHelpText<
           CLIOptionParam
         >,
         commands: cli.state.commands as Record<CLICommandName, AnyCLI>,
+        action: cli.state.action,
       },
       level: 1,
     }),

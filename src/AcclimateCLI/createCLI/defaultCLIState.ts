@@ -7,6 +7,8 @@ export const defaultCLIState: Omit<
 > = {
   aliases: {},
   description: undefined,
+  usage: undefined,
+  examples: [],
   commands: {},
   positionalArgs: [],
   optionArgs: {},

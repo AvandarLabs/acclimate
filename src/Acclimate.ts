@@ -1,5 +1,5 @@
 import { createCLI } from "./AcclimateCLI";
-import { runCLI } from "./AcclimateCLI/runCLI/runCLI";
+import { executeCLI } from "./AcclimateCLI/executeCLI/executeCLI";
 import { generateTerminalMessage } from "./generateTerminalMessage";
 import { requestTerminalInput } from "./requestTerminalInput";
 import type { AnyCLI, IAcclimateCLI } from "./AcclimateCLI/AcclimateCLI.types";
@@ -91,7 +91,15 @@ type Acclimate = {
 export const Acclimate: Acclimate = {
   createCLI,
   run: (cli: AnyCLI) => {
-    void runCLI({ cli, input: process.argv.slice(2) });
+    void executeCLI({
+      cli,
+      input: process.argv.slice(2),
+      stdout: process.stdout,
+      stderr: process.stderr,
+      onExitCode: (exitCode) => {
+        process.exitCode = exitCode;
+      },
+    });
   },
   log: (
     message: string,

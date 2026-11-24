@@ -2,6 +2,7 @@ import { CLIError } from "@/CLIError";
 import type {
   AddEntry,
   CLICommandName,
+  CLIExample,
   CLIFullOptionName,
   CLIOptionParam,
   CLIPositionalParam,
@@ -51,7 +52,7 @@ export function AcclimateCLI<
             TGlobalOptionParams
           >
         >,
-      ) => void,
+      ) => void | Promise<void>,
     ): IAcclimateCLI<
       TPositionalParams,
       TOptionParams,
@@ -75,6 +76,34 @@ export function AcclimateCLI<
       return AcclimateCLI({
         ...state,
         description,
+      });
+    },
+
+    usage: (
+      usage: string,
+    ): IAcclimateCLI<
+      TPositionalParams,
+      TOptionParams,
+      TGlobalOptionParams,
+      TCommands
+    > => {
+      return AcclimateCLI({
+        ...state,
+        usage,
+      });
+    },
+
+    addExample: (
+      example: CLIExample,
+    ): IAcclimateCLI<
+      TPositionalParams,
+      TOptionParams,
+      TGlobalOptionParams,
+      TCommands
+    > => {
+      return AcclimateCLI({
+        ...state,
+        examples: [...state.examples, example],
       });
     },
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createCLI } from "@/AcclimateCLI/createCLI";
 import { CLIError } from "@/CLIError";
-import { tokenizeCLIInput } from "./tokenizeCLIInput";
+import { tokenizeCLIInput } from "../tokenizeCLIInput";
 
 function _expectCLIErrorCode(
   action: () => unknown,
