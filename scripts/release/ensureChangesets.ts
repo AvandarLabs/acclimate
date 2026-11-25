@@ -1,10 +1,11 @@
 import { buildChangesetMarkdown } from "./buildChangesetMarkdown";
+import { isVersionPublished } from "./npmRegistry";
 import {
   collectReleaseCommits,
   findReleaseAnchor,
   selectReleaseCandidates,
 } from "./releaseCommits";
-import { DIFF_CHAR_BUDGET, NPM_REGISTRY_URL } from "./releaseConfig";
+import { DIFF_CHAR_BUDGET } from "./releaseConfig";
 import {
   buildFallbackNotes,
   requestReleaseNotes,
@@ -31,23 +32,6 @@ export type EnsureChangesetsResult =
   | { kind: "skipped-unpublished" }
   | { kind: "nothing-to-release" }
   | { kind: "written"; fileNames: string[] };
-
-async function _isVersionPublished(params: {
-  name: string;
-  version: string;
-  fetchFn: typeof fetch;
-}): Promise<boolean> {
-  const { name, version, fetchFn } = params;
-  const url = `${NPM_REGISTRY_URL}/${name.replace("/", "%2F")}/${version}`;
-  const response = await fetchFn(url);
-  if (response.status === 404) {
-    return false;
-  }
-  if (!response.ok) {
-    throw new Error(`npm registry returned ${response.status}.`);
-  }
-  return true;
-}
 
 async function _requestNotesOrFallBack(
   deps: EnsureChangesetsDeps,
@@ -114,7 +98,7 @@ export async function ensureChangesets(
     return { kind: "skipped-manual" };
   }
   const { name, version } = await deps.readPackageJson();
-  if (!(await _isVersionPublished({ name, version, fetchFn: deps.fetchFn }))) {
+  if (!(await isVersionPublished({ name, version, fetchFn: deps.fetchFn }))) {
     deps.log(`${name}@${version} is not published yet: nothing to version.`);
     return { kind: "skipped-unpublished" };
   }
