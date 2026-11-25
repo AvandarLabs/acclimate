@@ -55,7 +55,7 @@ function _deps(
     ...overrides,
     // exposed for assertions
     ...({ written } as object),
-  } as EnsureChangesetsDeps;
+  };
 }
 
 describe("ensureChangesets", () => {
