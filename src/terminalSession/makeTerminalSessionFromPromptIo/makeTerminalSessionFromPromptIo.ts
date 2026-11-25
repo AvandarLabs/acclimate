@@ -6,7 +6,7 @@ import type { PromptIo, TerminalSession } from "../terminalSession.types";
  * color and raw-mode capabilities from the output stream and environment when
  * not explicitly specified.
  *
- * Called by `runCLI`, `executeCLI`, `requestChoiceMenu`, and
+ * Called by `runCli`, `executeCli`, `requestChoiceMenu`, and
  * `requestTerminalInput` when callers inject `promptIo`.
  */
 export function makeTerminalSessionFromPromptIo(options: {

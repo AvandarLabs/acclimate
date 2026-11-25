@@ -151,7 +151,7 @@ committing or finishing a task.
   variable actually holds. Always include a noun, such as `nextToken`,
   `prevArg`, or `numOptions`.
 - Builder functions for objects or classes should be named `create{Type}`.
-  E.g. `createCLI`.
+  E.g. `createCli`.
 - Builder functions for strings or primitives should be named `build{Thing}`.
   E.g. `buildUsageLine`.
 - Builder functions that take some seed data to build an output should use the

@@ -105,7 +105,7 @@ function _makeFallbackTtySession(options: {
  * terminal is attached, or falls back to `stdin` and `stderr` only when both
  * are TTYs. Returns `undefined` in unattended, CI, or fully piped contexts.
  *
- * Used by interactive prompt helpers and `runCLI` so prompts never consume
+ * Used by interactive prompt helpers and `runCli` so prompts never consume
  * piped `stdin` or pollute machine-consumable `stdout`.
  */
 export async function openTerminalSession(

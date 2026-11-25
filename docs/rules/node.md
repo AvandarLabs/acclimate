@@ -11,7 +11,7 @@ Node.js.
 - Import Node's built-ins with the `node:` prefix (`node:readline`,
   `node:fs/promises`, `node:path`) in new and modified code.
 - Relative imports omit file extensions (for example
-  `import { createCLI } from "./AcclimateCLI"`). `tsconfig.json` uses
+  `import { createCli } from "./AcclimateCli"`). `tsconfig.json` uses
   `moduleResolution: "bundler"` with `allowImportingTsExtensions: false`,
   ESLint enforces `import-x/extensions` (`never`), and `tsup` bundles
   `src/index.ts` to `dist/`.
@@ -33,7 +33,7 @@ compatible with `tsx`, `tsup`, and modern Node.js:
 ## The process
 
 - Keep process globals out of core library modules. Accept inputs, streams, and
-  environment values as parameters (such as `runCLI({ cli, input })`) so
+  environment values as parameters (such as `runCli({ cli, input })`) so
   modules stay deterministic and easy to unit-test.
 - Never call `process.exit()` inside library code, which cuts off unflushed
   stdout/stderr and breaks callers embedding Acclimate. Prefer setting
@@ -48,7 +48,7 @@ compatible with `tsx`, `tsup`, and modern Node.js:
 
 ## Errors
 
-- Throw `Error` instances (or `CLIError` for user-facing argument, option, and
+- Throw `Error` instances (or `CliError` for user-facing argument, option, and
   usage errors), never strings or plain objects (enforced by ESLint
   `@typescript-eslint/only-throw-error`).
 - When rethrowing, wrap and keep the original cause:

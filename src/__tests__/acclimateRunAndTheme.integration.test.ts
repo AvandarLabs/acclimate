@@ -46,7 +46,7 @@ describe("Acclimate.run, Acclimate.execute, and semantic theming", () => {
     const previousExitCode = process.exitCode;
     process.exitCode = undefined;
 
-    const cli = Acclimate.createCLI("ship")
+    const cli = Acclimate.createCli("ship")
       .description("Deploy a service")
       .addOption({
         name: "--env",
@@ -152,7 +152,7 @@ describe("Acclimate.run, Acclimate.execute, and semantic theming", () => {
   });
 
   it("isolates injected stdout, stderr, env, theme, and promptIo across concurrent Acclimate.run calls", async () => {
-    const cli = Acclimate.createCLI("worker")
+    const cli = Acclimate.createCli("worker")
       .addPositionalArg({
         name: "label",
         type: "string",
@@ -252,7 +252,7 @@ describe("Acclimate.run, Acclimate.execute, and semantic theming", () => {
     expect(Acclimate.theme.palette.accent).toBe("\x1b[95m");
     expect(createTheme({ color: true }).palette.accent).toBe("\x1b[96m");
 
-    const cli = Acclimate.createCLI("branded").description("Branded tool");
+    const cli = Acclimate.createCli("branded").description("Branded tool");
     const stdout = _createMemoryStream(false);
 
     const exitCode = await Acclimate.run(cli, {

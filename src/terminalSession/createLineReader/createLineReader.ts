@@ -1,6 +1,6 @@
 import { createInterface } from "node:readline";
 import { Writable } from "node:stream";
-import { CLIError } from "@/CLIError";
+import { CliError } from "@/CliError";
 import type {
   TerminalOutputStream,
   TerminalSession,
@@ -33,7 +33,7 @@ function _toWritableStream(output: Readonly<TerminalOutputStream>): Writable {
 /**
  * Creates a queued line reader over a `TerminalSession` that preserves
  * multi-line buffered input, writes prompts exclusively to `session.output`,
- * and converts `SIGINT` or `EOF` into `CLIError.promptCancelled`.
+ * and converts `SIGINT` or `EOF` into `CliError.promptCancelled`.
  *
  * Used by `requestTerminalInput` and plain-mode `requestChoiceMenu`.
  */
@@ -59,7 +59,7 @@ export function createLineReader(options: {
       session.output.write(promptText);
       const nextLine = await lineIterator.next();
       if (nextLine.done) {
-        throw CLIError.promptCancelled({ cliName });
+        throw CliError.promptCancelled({ cliName });
       }
       return nextLine.value;
     },

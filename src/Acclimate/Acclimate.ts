@@ -1,6 +1,6 @@
-import { createCLI } from "@/AcclimateCLI";
-import { executeCLI } from "@/AcclimateCLI/executeCLI/executeCLI";
-import { ExecutionIoContext } from "@/AcclimateCLI/ExecutionIoContext/ExecutionIoContext";
+import { createCli } from "@/AcclimateCli";
+import { executeCli } from "@/AcclimateCli/executeCli/executeCli";
+import { ExecutionIoContext } from "@/AcclimateCli/ExecutionIoContext/ExecutionIoContext";
 import { generateTerminalMessage } from "@/generateTerminalMessage";
 import { requestChoiceMenu } from "@/requestChoiceMenu/requestChoiceMenu";
 import { requestTerminalInput } from "@/requestTerminalInput";
@@ -12,7 +12,7 @@ import type {
   AcclimateRunOptions,
   AcclimateStatusPrintOptions,
 } from "./Acclimate.types";
-import type { AnyCLI } from "@/AcclimateCLI/AcclimateCLI.types";
+import type { AnyCli } from "@/AcclimateCli/AcclimateCli.types";
 import type { TerminalOutputStream } from "@/terminalSession/terminalSession.types";
 import type {
   SemanticTheme,
@@ -87,14 +87,14 @@ function _buildRunThemeInput(
  * structured data, and prompting interactively in `@avandar/acclimate` CLIs.
  */
 export const Acclimate: AcclimateFacade = {
-  createCLI,
-  run: (cli: AnyCLI, options?: Readonly<AcclimateRunOptions>) => {
+  createCli,
+  run: (cli: AnyCli, options?: Readonly<AcclimateRunOptions>) => {
     const shouldSetProcessExitCode =
       options?.setProcessExitCode ??
       (options?.onExitCode === undefined &&
         !_hasInjectedExecutionBoundary(options));
 
-    return executeCLI({
+    return executeCli({
       cli,
       args: options?.args ?? process.argv.slice(2),
       stdin: options?.stdin ?? process.stdin,
@@ -117,7 +117,7 @@ export const Acclimate: AcclimateFacade = {
         : undefined),
     });
   },
-  execute: (cli: AnyCLI, options = {}) => {
+  execute: (cli: AnyCli, options = {}) => {
     return Acclimate.run(cli, {
       ...options,
       setProcessExitCode: false,

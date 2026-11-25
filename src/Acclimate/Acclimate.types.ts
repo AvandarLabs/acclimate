@@ -1,4 +1,4 @@
-import type { AnyCLI, IAcclimateCLI } from "@/AcclimateCLI/AcclimateCLI.types";
+import type { AnyCli, IAcclimateCli } from "@/AcclimateCli/AcclimateCli.types";
 import type { ChoiceMenuOptions } from "@/requestChoiceMenu/requestChoiceMenu.types";
 import type { RequestTerminalInputOptions } from "@/requestTerminalInput/requestTerminalInput";
 import type {
@@ -90,7 +90,7 @@ export type AcclimateRunOptions = {
 /** Public facade contract exposed by the `Acclimate` singleton module. */
 export type AcclimateFacade = {
   /** Create a new Acclimate CLI instance. */
-  createCLI: (name: string) => IAcclimateCLI;
+  createCli: (name: string) => IAcclimateCli;
 
   /**
    * Run a CLI against `options.args` (or `process.argv.slice(2)`), separating
@@ -99,7 +99,7 @@ export type AcclimateFacade = {
    * without calling `process.exit()`.
    */
   run: (
-    cli: AnyCLI,
+    cli: AnyCli,
     options?: Readonly<AcclimateRunOptions>,
   ) => Promise<number>;
 
@@ -109,7 +109,7 @@ export type AcclimateFacade = {
    * without mutating `process.exitCode`.
    */
   execute: (
-    cli: AnyCLI,
+    cli: AnyCli,
     options?: Readonly<Omit<AcclimateRunOptions, "setProcessExitCode">>,
   ) => Promise<number>;
 
