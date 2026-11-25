@@ -1,12 +1,18 @@
 name: CI
 
-# Type-check, lint, test, and build on every PR and every push to main.
+# Type-check, lint, test, and build on every push to any branch, including
+# `main`. It deliberately does not use the `pull_request` trigger: the
+# version PR is opened by github-actions[bot], and GitHub starts a
+# `pull_request` run for it that dies with "workflow file issue" and no jobs,
+# a permanent red X. Bot pushes with GITHUB_TOKEN never trigger `push`
+# workflows, so the version branch is ignored explicitly and gets no run.
+# `release.yaml` already runs the same checks before opening that PR and again
+# before publishing. Pull requests from forks do not run this workflow.
 
 on:
-  pull_request:
   push:
-    branches:
-      - main
+    branches-ignore:
+      - "changeset-release/**"
 
 concurrency:
   group: ci-${{ github.ref }}

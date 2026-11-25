@@ -13,13 +13,15 @@ merge the version PR. Nobody edits `package.json` or runs `npm publish`.
    @avandar/acclimate** PR that bumps `package.json` and writes
    `CHANGELOG.md`.
 3. Merging that PR runs the workflow again. The current version is not on npm
-   yet, so no changesets are generated and the action runs `npm run release`
-   (build, then `changeset publish`): it publishes to npm, pushes a
-   `v<version>` tag, and creates a GitHub release whose notes are the
-   changelog section.
+   yet, so no changesets are generated and the Changesets action runs
+   `npm run release` (build, then `changeset publish`) to publish to npm. A
+   final step, `npm run release:github` (`scripts/release/`), then creates the
+   `v<version>` tag and the GitHub release with the changelog section as its
+   notes. That step is idempotent: it does nothing unless the version is on npm
+   and has no release yet, so it also repairs a release that failed earlier.
 
-`.github/workflows/ci.yaml` runs type-check, lint, tests, and build on every PR
-and push to `main`.
+`.github/workflows/ci.yaml` runs type-check, lint, tests, and build on every
+push to any branch (not the version branch, see Gotchas).
 
 ## How the version is chosen
 
@@ -72,9 +74,25 @@ exists, automatic generation is skipped and the release uses yours.
 
 ## Gotchas
 
-- The version PR is created by `GITHUB_TOKEN`, so GitHub does not run
-  `ci.yaml` on it. `release.yaml` already gates on the same checks before it
-  opens the PR and before it publishes.
+- **Why GitHub releases are created by our own step.** The Changesets action
+  creates releases only when the publish output contains `New tag:` lines.
+  changesets CLI 3 no longer prints them, so the action reports nothing
+  published, skips the tag push and the release, and `createGithubReleases` is
+  therefore turned off. If the action ever works again, `release:github` sees
+  the release exists and skips. `GITHUB_TOKEN` with `contents: write` is all it
+  needs: there is no setting to enable Releases and no extra secret.
+- **`ANTHROPIC_API_KEY` is only for the note text.** Publishing to npm and
+  creating the release never use it. Without it the notes fall back to commit
+  subjects.
+- **No CI run on the version PR.** CI triggers on `push`, not `pull_request`.
+  The version PR is opened by github-actions[bot], and a `pull_request` run
+  for it fails at startup with no jobs (a permanent red X; re-running it as a
+  human passes). Bot pushes made with `GITHUB_TOKEN` do not trigger `push`
+  workflows, so the version PR simply has no CI check. `release.yaml` already
+  runs the same checks before opening it and before publishing. The cost: PRs
+  from forks do not run CI.
+- Do not make `check` a required status check on `main` unless the version PR
+  is exempt: with no CI run it would never be satisfied.
 - Do not edit `version` in `package.json` by hand.
 - A tracked `pnpm-lock.yaml` makes Changesets call `pnpm`, which CI does not
   have. `wt` creates one in new worktrees, so it is gitignored.

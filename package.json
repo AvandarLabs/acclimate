@@ -35,7 +35,8 @@
     "changeset": "changeset",
     "changeset:version": "changeset version && npm install --package-lock-only",
     "release": "npm run build && changeset publish",
-    "release:changesets": "tsx scripts/release/runEnsureChangesets.ts"
+    "release:changesets": "tsx scripts/release/runEnsureChangesets.ts",
+    "release:github": "tsx scripts/release/runCreateGithubRelease.ts"
   },
   "keywords": [
     "cli",

@@ -8,9 +8,10 @@ name: Release
 #      release (bump from commit types and branch prefixes, note text from an
 #      Anthropic model), then opens or updates a "Release: @avandar/acclimate"
 #      PR that bumps the version and writes CHANGELOG.md.
-#   3. Merging that PR runs this workflow again. No changesets are pending, so
-#      it publishes to npm, tags `v<version>`, and creates a GitHub release
-#      whose notes come from the changelog.
+#   3. Merging that PR runs this workflow again. The current version is not on
+#      npm yet, so no changesets are generated and the Changesets action
+#      publishes to npm. A final step then tags `v<version>` and creates the
+#      GitHub release, with the changelog section as its notes.
 #
 # Nothing publishes without a human merging the version PR.
 #
@@ -75,9 +76,18 @@ jobs:
           publish: npm run release
           title: "Release: @avandar/acclimate"
           commit: "Release: @avandar/acclimate"
-          # Tags the release and creates the GitHub release (default true,
-          # explicit for clarity).
-          createGithubReleases: true
+          # The action only creates releases when it sees `New tag:` lines in
+          # the publish output, which changesets CLI 3 no longer prints. The
+          # "Tag and create GitHub release" step below does it instead.
+          createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
+
+      # Idempotent: does nothing unless the current version is on npm and has
+      # no GitHub release yet. Creates the `v<version>` tag at the commit that
+      # set the version, with the changelog section as the release notes.
+      - name: Tag and create GitHub release
+        run: npm run release:github
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
