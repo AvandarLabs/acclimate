@@ -5,7 +5,7 @@
 - Use JSDoc to document public types, objects, classes, and functions.
 - **Use functional and declarative programming patterns.**
   - Avoid classes or imperative programming patterns unless an error subclass
-    (such as `CLIError`) or similar built-in requires one.
+    (such as `CliError`) or similar built-in requires one.
   - Use higher-order functions (`map`, `filter`, `reduce`).
   - Avoid `for` and `while` loops when a declarative transform is clearer.
 - Use named exports instead of default exports.
@@ -64,8 +64,6 @@
 - Naming exceptions:
   - `E2E` stays fully uppercased or fully lowercased (e.g. `e2eConfig` or
     `runE2ETest`).
-  - `CLI` stays uppercased in Acclimate identifiers (e.g. `AcclimateCLI`,
-    `createCLI`, `runCLI`, `CLIError`).
 
 ## Types
 
@@ -219,9 +217,9 @@
   `verbatimModuleSyntax: true` in `tsconfig.json`):
 
   ```ts
-  import type { CLIOptionParam } from "./AcclimateCLI.types";
+  import type { CliOptionParam } from "./AcclimateCli.types";
 
-  export type { CLIOptionParam } from "./AcclimateCLI.types";
+  export type { CliOptionParam } from "./AcclimateCli.types";
   ```
 
 - Relative imports omit file extensions (enforced by `tsconfig.json` and
@@ -246,7 +244,7 @@
   module `index.ts` files can remain untouched unless refactored as part of
   scoped work).
 - Never use namespace re-exports (`export * from ...`). Always use explicit
-  named exports (`export { createCLI } from ...`).
+  named exports (`export { createCli } from ...`).
 - All exported classes, objects, and functions must have a JSDoc docstring.
 
   ```ts
@@ -303,7 +301,7 @@
 ```ts
 // Good: readonly input, mutable locally, mutable output
 export function getRequiredOptionNames(
-  options: readonly CLIOptionParam[],
+  options: readonly CliOptionParam[],
 ): string[] {
   const names: string[] = [];
   options.forEach((option) => {

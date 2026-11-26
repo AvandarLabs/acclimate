@@ -30,8 +30,8 @@ function _isSemanticTheme(value: ThemeInput): value is SemanticTheme {
  * `stream`, `isTTY`, `env`), preserving custom palettes while binding color
  * output to explicit toggles or stream/environment detection.
  *
- * Called by `generateHelpText`, `formatCLIError`, `generateTerminalMessage`,
- * `runCLI`, `executeCLI`, and `Acclimate` output helpers.
+ * Called by `generateHelpText`, `formatCliError`, `generateTerminalMessage`,
+ * `runCli`, `executeCli`, and `Acclimate` output helpers.
  */
 export function makeThemeFromOptions(
   options: Readonly<MakeThemeFromOptionsInput> = {},

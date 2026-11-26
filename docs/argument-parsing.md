@@ -20,7 +20,7 @@ parsed in declaration order:
     tokens are supplied, Acclimate passes a fresh copy of `defaultValue` if
     configured, or `[]` otherwise.
   - `required: true` requires at least one token (`<paths...>`). Supplying
-    zero tokens throws `CLIError` with code `missing_required_positional_arg`
+    zero tokens throws `CliError` with code `missing_required_positional_arg`
     (ignoring `defaultValue` when non-interactive).
 
 ### Ordering Invariants
@@ -28,13 +28,13 @@ parsed in declaration order:
 `addPositionalArg` enforces two invariants eagerly when building a CLI:
 
 1. A variadic positional argument must be the **last** positional argument.
-   Adding any positional argument after a variadic one throws `CLIError` with
+   Adding any positional argument after a variadic one throws `CliError` with
    code `invalid_positional_arg_config`.
 2. Required positional arguments must precede optional positional arguments.
 
 ## Schema-Aware Tokenization and Interleaving
 
-`tokenizeCLIInput` scans `argv` left to right using the active command's
+`tokenizeCliInput` scans `argv` left to right using the active command's
 declared `optionArgs`, `globalOptionArgs`, `aliases`, and `commands`.
 
 - **Free interleaving:** Positional arguments may appear before, between, or
@@ -60,8 +60,8 @@ declared `optionArgs`, `globalOptionArgs`, `aliases`, and `commands`.
 - **Repeated options:** When an option (or its aliases) appears more than once,
   the last value wins.
 - **Unknown flags and missing values:** Unrecognized flags before `--` throw
-  `CLIError` (`unknown_option`). Value-taking options with no value (at end of
-  input, before `--`, or before another flag) throw `CLIError`
+  `CliError` (`unknown_option`). Value-taking options with no value (at end of
+  input, before `--`, or before another flag) throw `CliError`
   (`missing_option_value`).
 
 ### Sub-Command Dispatch and Global Options
@@ -75,7 +75,7 @@ sub-command.
 
 ## Parsing, Validation, Defaults, and Prompts
 
-`parseCLIParamValue` runs for every option, scalar positional argument, and
+`parseCliParamValue` runs for every option, scalar positional argument, and
 element of a variadic positional argument:
 
 1. **Parsing:** Runs `param.parser` when supplied; otherwise applies default
@@ -83,9 +83,9 @@ element of a variadic positional argument:
    `boolean` treating `"false"` as `false` and all other values including `""`
    as `true`).
 2. **Choices:** When `choices` is configured and non-empty, rejects parsed
-   values outside the allowed list with `CLIError` (`invalid_cli_param_value`).
+   values outside the allowed list with `CliError` (`invalid_cli_param_value`).
 3. **Validator:** Runs `param.validator` on each parsed value (or default
-   element), throwing `CLIError` (`invalid_cli_param_value`) on `false` or a
+   element), throwing `CliError` (`invalid_cli_param_value`) on `false` or a
    custom error string.
 4. **Interactive prompts (`askIfEmpty`) and unattended mode:** See
    [`docs/interactive-prompts.md`](interactive-prompts.md) for full details.
@@ -96,7 +96,7 @@ element of a variadic positional argument:
      consuming piped `stdin`.
    - When no TTY is attached, `CI` is enabled, or `--no-prompt` is supplied,
      missing required `askIfEmpty` parameters fail promptly with an actionable
-     `CLIError` naming the flag or argument and example invocation, while
+     `CliError` naming the flag or argument and example invocation, while
      optional parameters fall back to `defaultValue` (or `[]` / `undefined`).
    - Built-in `--no-prompt` (and `--no-prompt=true` / `--no-prompt=false`) is
      recognized before `--` at any command level even when not declared on the
@@ -144,8 +144,8 @@ sub-command:
   - `Examples` declared via `cli.addExample(example)` (either a command string
     or `{ command, description }`).
   - Alphabetically sorted `Commands`.
-- `CLIError` is exported from `@avandar/acclimate` and exposes:
-  - `code: CLIErrorCode` (`invalid_positional_arg_config`,
+- `CliError` is exported from `@avandar/acclimate` and exposes:
+  - `code: CliErrorCode` (`invalid_positional_arg_config`,
     `too_many_positional_args`, `missing_required_positional_arg`,
     `missing_required_option`, `missing_option_value`, `unknown_option`,
     `invalid_cli_param_value`, `unknown_command`, `already_run`,
@@ -153,8 +153,8 @@ sub-command:
   - `cliName`, optional `commandPath`, optional `hint` (`Run <cmd> --help to
 see available options and usage.`, or a flag/invocation hint on unattended
     required prompt failures), and optional `usage`.
-- `executeCLI` (used by `Acclimate.run(cli)` and exported for programmatic
-  testing/embedding) writes `CLIError` output formatted by `formatCLIError`
+- `executeCli` (used by `Acclimate.run(cli)` and exported for programmatic
+  testing/embedding) writes `CliError` output formatted by `formatCliError`
   (red error line, indented yellow `⚠️` recovery hint, and full command usage,
   automatically stripping ANSI color on redirected `stderr`, `NO_COLOR`, or
   `TERM=dumb`) to `stderr`, leaves `stdout` empty, omits raw stack traces for

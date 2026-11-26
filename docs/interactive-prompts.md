@@ -25,7 +25,7 @@ detection, controlling-terminal opening, and stream cleanup:
 - **Safe fallback:** On platforms or environments where `/dev/tty` is
   unavailable, Acclimate falls back to `stdin` and `stderr` only when both are
   TTYs. It never falls back to piped `stdin` or to `stdout`.
-- **Lazy single-session lifecycle:** `runCLI` opens a terminal session lazily
+- **Lazy single-session lifecycle:** `runCli` opens a terminal session lazily
   only when a bare command menu or `askIfEmpty` prompt is actually needed.
   Explicit CLI values never open `/dev/tty`. Any opened session is restored to
   cooked mode and closed in `finally` before the matched command `.action()`
@@ -52,7 +52,7 @@ interactive selection menus across three layers:
    unsupported (`TERM=dumb`). On confirm, cancel (`Ctrl-C` or `EOF`), or stream
    error, it restores raw mode, cursor visibility, and listeners before settling.
 
-### Automatic Menu Usage in `runCLI`
+### Automatic Menu Usage in `runCli`
 
 - **Parameters with `choices`:** `askIfEmpty` parameters with a `choices` list
   render a choice menu automatically (adding a `(skip)` entry when optional
@@ -72,27 +72,27 @@ interactive selection menus across three layers:
   (or `interactive: false`).
 - **Unattended parameter rules:**
   - Missing **required** parameters (including those with `askIfEmpty`) fail
-    promptly with `CLIError` (`missing_required_option` or
+    promptly with `CliError` (`missing_required_option` or
     `missing_required_positional_arg`), carrying an actionable message and
     recovery hint naming the flag or argument and example invocation.
   - Missing **optional** parameters skip prompting and apply `defaultValue` (or
     `[]` for variadic positionals, or `undefined`).
   - Bare actionless parent commands print help text to `stdout` instead of
     opening a menu.
-- **Cancellation (`Ctrl-C` / `EOF`):** Aborts immediately with `CLIError`
+- **Cancellation (`Ctrl-C` / `EOF`):** Aborts immediately with `CliError`
   (`code: "prompt_cancelled"`), prevents subsequent prompts and command
   actions, writes a concise cancellation message to `stderr` (without dumping
-  full usage), and exits with status `130` via `executeCLI` / `Acclimate.run`.
+  full usage), and exits with status `130` via `executeCli` / `Acclimate.run`.
 
 ## Strict Stream Separation
 
 | Output kind                            | Stream                   | Helper / Behavior                                                                        |
 | -------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------- |
 | Machine data (JSON, paths, records)    | `stdout`                 | Command `.action()`, `Acclimate.writeData`, `Acclimate.writeJson`                        |
-| Explicit `-h` / `--help`               | `stdout`                 | `runCLI` / `executeCLI` via `stdout` semantic theme (plain when piped/`NO_COLOR`/`dumb`) |
+| Explicit `-h` / `--help`               | `stdout`                 | `runCli` / `executeCli` via `stdout` semantic theme (plain when piped/`NO_COLOR`/`dumb`) |
 | Conversational logs and status output  | `stderr`                 | `Acclimate.log`, `printSuccess`, `printInfo`, `printWarn`, `printError` (semantic theme) |
-| Errors, recovery hints, usage-on-error | `stderr`                 | `formatCLIError` via `executeCLI` / `Acclimate.run` (exit `1`, or `130` on cancel)       |
-| Interactive prompts and choice menus   | `/dev/tty` (or `stderr`) | `requestChoiceMenu`, `requestTerminalInput`, `runCLI` (using semantic theme)             |
+| Errors, recovery hints, usage-on-error | `stderr`                 | `formatCliError` via `executeCli` / `Acclimate.run` (exit `1`, or `130` on cancel)       |
+| Interactive prompts and choice menus   | `/dev/tty` (or `stderr`) | `requestChoiceMenu`, `requestTerminalInput`, `runCli` (using semantic theme)             |
 
 See [`docs/semantic-theming-and-io.md`](semantic-theming-and-io.md) for the
 semantic theme palette, plain-mode rules, and injectable `Acclimate.run` /

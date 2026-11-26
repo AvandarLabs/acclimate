@@ -1,7 +1,7 @@
 export { Acclimate } from "./Acclimate/Acclimate";
-export { executeCLI } from "./AcclimateCLI/executeCLI/executeCLI";
-export { generateHelpText } from "./AcclimateCLI/generateHelpText/generateHelpText";
-export { CLIError } from "./CLIError";
+export { executeCli } from "./AcclimateCli/executeCli/executeCli";
+export { generateHelpText } from "./AcclimateCli/generateHelpText/generateHelpText";
+export { CliError } from "./CliError";
 export { requestChoiceMenu } from "./requestChoiceMenu/requestChoiceMenu";
 export { requestTerminalInput } from "./requestTerminalInput/requestTerminalInput";
 export { isColorEnabledForStream } from "./terminalSession/isColorEnabledForStream/isColorEnabledForStream";
@@ -21,24 +21,24 @@ export type {
   AcclimateStatusPrintOptions,
 } from "./Acclimate/Acclimate.types";
 export type {
-  AnyCLI,
-  CLICommandName,
-  CLIExample,
-  CLIFullOptionName,
-  CLIOptionAlias,
-  CLIOptionParam,
-  CLIParamDataType,
-  CLIParamScalarValue,
-  CLIPositionalParam,
-  CLIScalarPositionalParam,
-  CLIVariadicPositionalParam,
-  IAcclimateCLI,
+  AnyCli,
+  CliCommandName,
+  CliExample,
+  CliFullOptionName,
+  CliOptionAlias,
+  CliOptionParam,
+  CliParamDataType,
+  CliParamScalarValue,
+  CliPositionalParam,
+  CliScalarPositionalParam,
+  CliVariadicPositionalParam,
+  IAcclimateCli,
   OutputStream,
-} from "./AcclimateCLI/AcclimateCLI.types";
-export type { ExecuteCLIOptions } from "./AcclimateCLI/executeCLI/executeCLI";
-export type { GenerateHelpTextOptions } from "./AcclimateCLI/generateHelpText/generateHelpText";
-export type { RunCLIOptions } from "./AcclimateCLI/runCLI/runCLI";
-export type { CLIErrorCode } from "./CLIError";
+} from "./AcclimateCli/AcclimateCli.types";
+export type { ExecuteCliOptions } from "./AcclimateCli/executeCli/executeCli";
+export type { GenerateHelpTextOptions } from "./AcclimateCli/generateHelpText/generateHelpText";
+export type { RunCliOptions } from "./AcclimateCli/runCli/runCli";
+export type { CliErrorCode } from "./CliError";
 export type {
   ChoiceMenuItem,
   ChoiceMenuOptions,

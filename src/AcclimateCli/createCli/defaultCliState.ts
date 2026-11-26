@@ -1,0 +1,17 @@
+import type { CliState } from "../AcclimateCli.types";
+import type { EmptyObject } from "type-fest";
+
+export const defaultCliState: Omit<
+  CliState<EmptyObject, EmptyObject, EmptyObject, EmptyObject>,
+  "name"
+> = {
+  aliases: {},
+  description: undefined,
+  usage: undefined,
+  examples: [],
+  commands: {},
+  positionalArgs: [],
+  optionArgs: {},
+  globalOptionArgs: {},
+  action: undefined,
+};

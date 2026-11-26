@@ -19,7 +19,7 @@ npm install acclimate
 ```ts
 import { Acclimate } from "acclimate";
 
-const cli = Acclimate.createCLI("demo-cli")
+const cli = Acclimate.createCli("demo-cli")
   .description("A tiny demo CLI")
   .action(() => {
     console.log("Hello, world!");
@@ -33,7 +33,7 @@ Acclimate.run(cli);
 Public exports from `@avandar/acclimate`:
 
 - `Acclimate`
-- `executeCLI`
+- `executeCli`
 - `generateHelpText`
 - `createTheme`
 - `stripAnsi`
@@ -42,14 +42,14 @@ Public exports from `@avandar/acclimate`:
 - `requestTerminalInput`
 - `openTerminalSession`
 - `isColorEnabledForStream`
-- `CLIError` (with `error.code` of type `CLIErrorCode`, plus `cliName`,
+- `CliError` (with `error.code` of type `CliErrorCode`, plus `cliName`,
   `commandPath`, `hint`, and `usage`)
-- Types: `IAcclimateCLI`, `AnyCLI`, `CLIExample`, `OutputStream`,
-  `CLIParamScalarValue`, `CLIParamDataType`, `CLIPositionalParam`,
-  `CLIScalarPositionalParam`, `CLIVariadicPositionalParam`, `CLIOptionParam`,
-  `CLICommandName`, `CLIFullOptionName`, `CLIOptionAlias`,
+- Types: `IAcclimateCli`, `AnyCli`, `CliExample`, `OutputStream`,
+  `CliParamScalarValue`, `CliParamDataType`, `CliPositionalParam`,
+  `CliScalarPositionalParam`, `CliVariadicPositionalParam`, `CliOptionParam`,
+  `CliCommandName`, `CliFullOptionName`, `CliOptionAlias`,
   `AcclimateRunOptions`, `AcclimateLogOptions`, `AcclimateStatusPrintOptions`,
-  `AcclimateErrorPrintOptions`, `ExecuteCLIOptions`, `RunCLIOptions`,
+  `AcclimateErrorPrintOptions`, `ExecuteCliOptions`, `RunCliOptions`,
   `GenerateHelpTextOptions`, `ChoiceMenuItem`, `ChoiceMenuOptions`,
   `RequestTerminalInputOptions`, `RequestTerminalInputResponseOptions`,
   `PromptIo`, `TerminalInputStream`, `TerminalOutputStream`, `TerminalSession`,
@@ -59,12 +59,12 @@ Public exports from `@avandar/acclimate`:
 
 ### `Acclimate`
 
-#### `Acclimate.createCLI(name)`
+#### `Acclimate.createCli(name)`
 
 Create a new CLI instance.
 
 ```ts
-Acclimate.createCLI(name: string): IAcclimateCLI
+Acclimate.createCli(name: string): IAcclimateCli
 ```
 
 #### `Acclimate.run(cli, options?)` and `Acclimate.execute(cli, options?)`
@@ -83,12 +83,12 @@ isStderrTTY, terminal, promptIo, interactive, openTty, theme, onExitCode }`
 
 ```ts
 Acclimate.run(
-  cli: AnyCLI,
+  cli: AnyCli,
   options?: Readonly<AcclimateRunOptions>,
 ): Promise<number>
 
 Acclimate.execute(
-  cli: AnyCLI,
+  cli: AnyCli,
   options?: Readonly<Omit<AcclimateRunOptions, "setProcessExitCode">>,
 ): Promise<number>
 ```
@@ -165,7 +165,7 @@ consuming piped `stdin`. Choice menus support `Up`/`Down`, `j`/`k` wrapping,
 `g`/`G` jumps, `1`-`9`, `Enter` confirm, and `Ctrl-C`/`EOF` cancellation that
 restores raw terminal mode.
 
-#### `executeCLI(options)`
+#### `executeCli(options)`
 
 Async execution boundary for embedding or testing a CLI with injectable
 `input`, `stdin`, `stdout`, `stderr`, `env`, `terminal`, `interactive`,
@@ -173,7 +173,7 @@ Async execution boundary for embedding or testing a CLI with injectable
 on prompt cancellation, and `1` on other failures.
 
 ```ts
-executeCLI(options: Readonly<ExecuteCLIOptions>): Promise<number>
+executeCli(options: Readonly<ExecuteCliOptions>): Promise<number>
 ```
 
 #### `generateHelpText(cli, options?)`
@@ -184,20 +184,20 @@ semantic theme (or plain text when `color: false`, redirected, `NO_COLOR`, or
 
 ```ts
 generateHelpText(
-  cli: IAcclimateCLI,
+  cli: IAcclimateCli,
   options?: Readonly<GenerateHelpTextOptions>,
 ): string
 ```
 
-### `IAcclimateCLI` (CLI builder)
+### `IAcclimateCli` (CLI builder)
 
-`createCLI()` returns an immutable builder. Each method returns a new CLI
+`createCli()` returns an immutable builder. Each method returns a new CLI
 instance with updated configuration.
 
 #### `cli.description(description)`
 
 ```ts
-cli.description(description: string): IAcclimateCLI
+cli.description(description: string): IAcclimateCli
 ```
 
 #### `cli.usage(usage)`
@@ -205,7 +205,7 @@ cli.description(description: string): IAcclimateCLI
 Override the auto-generated `Usage` synopsis line in help output.
 
 ```ts
-cli.usage(usage: string): IAcclimateCLI
+cli.usage(usage: string): IAcclimateCli
 ```
 
 #### `cli.addExample(example)`
@@ -215,7 +215,7 @@ Add a worked example shown in the `Examples` section of help output.
 ```ts
 cli.addExample(
   example: string | { command: string; description?: string },
-): IAcclimateCLI
+): IAcclimateCli
 ```
 
 #### `cli.action(action)`
@@ -225,8 +225,8 @@ synchronous and `async` callbacks.
 
 ```ts
 cli.action(
-  action: (args: FullCLIArgValues<...>) => void | Promise<void>,
-): IAcclimateCLI
+  action: (args: FullCliArgValues<...>) => void | Promise<void>,
+): IAcclimateCli
 ```
 
 #### `cli.addPositionalArg(param)`
@@ -234,7 +234,7 @@ cli.action(
 Add a positional argument. Positional args are parsed in order.
 
 ```ts
-cli.addPositionalArg(param: CLIPositionalParam): IAcclimateCLI
+cli.addPositionalArg(param: CliPositionalParam): IAcclimateCli
 ```
 
 #### `cli.addOption(param)`
@@ -242,7 +242,7 @@ cli.addPositionalArg(param: CLIPositionalParam): IAcclimateCLI
 Add an option local to this CLI level.
 
 ```ts
-cli.addOption(param: CLIOptionParam): IAcclimateCLI
+cli.addOption(param: CliOptionParam): IAcclimateCli
 ```
 
 #### `cli.addGlobalOption(param)`
@@ -250,10 +250,10 @@ cli.addOption(param: CLIOptionParam): IAcclimateCLI
 Add an option that is available to this CLI and all sub-commands.
 
 ```ts
-cli.addGlobalOption(param: CLIOptionParam): IAcclimateCLI
+cli.addGlobalOption(param: CliOptionParam): IAcclimateCli
 ```
 
-#### `cli.addCommand(commandName, commandCLI)`
+#### `cli.addCommand(commandName, commandCli)`
 
 Add a sub-command (a nested CLI). If the first positional token matches a
 command name, parsing continues using that command's CLI.
@@ -261,23 +261,23 @@ command name, parsing continues using that command's CLI.
 ```ts
 cli.addCommand(
   commandName: string,
-  commandCLI: IAcclimateCLI,
-): IAcclimateCLI
+  commandCli: IAcclimateCli,
+): IAcclimateCli
 ```
 
-#### `cli.getCommandCLI(commandName)`
+#### `cli.getCommandCli(commandName)`
 
 Get a command CLI by name (throws if missing).
 
 ```ts
-cli.getCommandCLI(commandName: string): IAcclimateCLI
+cli.getCommandCli(commandName: string): IAcclimateCli
 ```
 
 ### Param config types
 
 Acclimate uses config objects to describe positional args and options.
 
-- **Positional args**: `CLIPositionalParam` (`CLIScalarPositionalParam | CLIVariadicPositionalParam`)
+- **Positional args**: `CliPositionalParam` (`CliScalarPositionalParam | CliVariadicPositionalParam`)
   - **name**: `string` (prefer `camelCase` to match runtime parsing)
   - **type**: `"string" | "number" | "boolean"`
   - **required**: `boolean` (for variadic args: `true` = one-or-more, `false` = zero-or-more)
@@ -288,7 +288,7 @@ Acclimate uses config objects to describe positional args and options.
   - **parser?**: `(value: string) => value` (runs per element when `variadic: true`)
   - **validator?**: `(value) => true | string` (runs per element when `variadic: true`)
 
-- **Options**: `CLIOptionParam`
+- **Options**: `CliOptionParam`
   - **name**: `--${string}` (example: `--dry-run`)
   - **aliases?**: `readonly ("--x" | "-x")[]`
   - **required**: `boolean`
@@ -303,14 +303,14 @@ See [docs/argument-parsing.md](docs/argument-parsing.md) for full details.
   `variadic: true` positional arg collects all remaining positional tokens as a
   typed array (defaulting to `[]` or a fresh copy of `defaultValue` when
   optional and omitted). Extra positional args without a variadic arg throw
-  `CLIError` (`too_many_positional_args`).
+  `CliError` (`too_many_positional_args`).
 - **Interleaved flags and positional args**: options and positional arguments
   may be mixed in any order (before, between, or after each other). Global
   options may also appear before or after a sub-command name.
 - **Value-taking options (`string` / `number`)**: consume a single following
   token (`--format json`) or an inline value after `=` (`--format=json`,
   `-f=json`). Pass multi-word values as one quoted shell token. Missing values
-  throw `CLIError` (`missing_option_value`).
+  throw `CliError` (`missing_option_value`).
 - **Boolean flags**: `--flag` with no value parses as `true` without consuming
   the next token; pass `--flag=false` or `--flag=true` to set an explicit value.
 - **End-of-options separator (`--`)**: every token after `--` is treated
@@ -333,8 +333,8 @@ See [docs/argument-parsing.md](docs/argument-parsing.md) for full details.
   optional values use defaults.
 - **Errors**: unknown flags before `--`, missing option values, missing required
   args/options, invalid numbers, values outside `choices`, and failed validators
-  fail with `CLIError` (`code`, `commandPath`, `hint`, `usage`). When run via
-  `Acclimate.run(cli)` or `executeCLI`, errors print a red message, an indented
+  fail with `CliError` (`code`, `commandPath`, `hint`, `usage`). When run via
+  `Acclimate.run(cli)` or `executeCli`, errors print a red message, an indented
   yellow recovery hint, and command usage to `stderr` (stripping color when
   redirected or `NO_COLOR` is set), leave `stdout` empty, and exit nonzero
   (`130` for `prompt_cancelled`, `1` for other failures).
@@ -403,7 +403,7 @@ Matches `examples/basic.ts`.
 ```ts
 import { Acclimate } from "acclimate";
 
-const cli = Acclimate.createCLI("demo-cli").action(() => {
+const cli = Acclimate.createCli("demo-cli").action(() => {
   console.log("Hello, world!");
 });
 
@@ -415,7 +415,7 @@ Acclimate.run(cli);
 ```ts
 import { Acclimate } from "acclimate";
 
-const cli = Acclimate.createCLI("greet")
+const cli = Acclimate.createCli("greet")
   .addPositionalArg({
     name: "name",
     type: "string",
@@ -443,7 +443,7 @@ Acclimate.run(cli);
 ```ts
 import { Acclimate } from "@avandar/acclimate";
 
-const coverageCmd = Acclimate.createCLI("coverage")
+const coverageCmd = Acclimate.createCli("coverage")
   .description("Check coverage for zero or more paths")
   .addPositionalArg({
     name: "paths",
@@ -471,14 +471,14 @@ const coverageCmd = Acclimate.createCLI("coverage")
     console.log({ paths, format, noPrompt });
   });
 
-const lintCLI = Acclimate.createCLI("avandar-lint").addCommand(
+const lintCli = Acclimate.createCli("avandar-lint").addCommand(
   "coverage",
   coverageCmd,
 );
 
 // Works with flags before, between, or after paths, and with `--` separator:
 // avandar-lint coverage --format json src/a.ts src/b.ts --no-prompt
-Acclimate.run(lintCLI);
+Acclimate.run(lintCli);
 ```
 
 ### Sub-commands + global options
@@ -486,13 +486,13 @@ Acclimate.run(lintCLI);
 ```ts
 import { Acclimate } from "acclimate";
 
-const initCmd = Acclimate.createCLI("init")
+const initCmd = Acclimate.createCli("init")
   .description("Initialize a project")
   .action(({ verbose }) => {
     console.log(`init (verbose=${verbose})`);
   });
 
-const root = Acclimate.createCLI("acme")
+const root = Acclimate.createCli("acme")
   .addGlobalOption({
     name: "--verbose",
     type: "boolean",

@@ -1,6 +1,6 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
-import { CLIError } from "@/CLIError";
+import { CliError } from "@/CliError";
 import { createTheme } from "@/theme/createTheme/createTheme";
 import { requestChoiceMenu } from "./requestChoiceMenu";
 import type { TerminalSession } from "@/terminalSession/terminalSession.types";
@@ -117,9 +117,9 @@ describe("requestChoiceMenu", () => {
       return error;
     });
 
-    expect(caughtError).toBeInstanceOf(CLIError);
-    if (!(caughtError instanceof CLIError)) {
-      throw new Error("Expected CLIError");
+    expect(caughtError).toBeInstanceOf(CliError);
+    if (!(caughtError instanceof CliError)) {
+      throw new Error("Expected CliError");
     }
     expect(caughtError.code).toBe("prompt_cancelled");
     expect(mock.rawModeCalls).toEqual([true, false]);

@@ -61,7 +61,7 @@ plain text.
 ## Exit codes are part of the interface
 
 Exit `0` only when a command succeeds. Any parsing error, validation error
-(`CLIError`), or command failure must exit non-zero after printing a concise,
+(`CliError`), or command failure must exit non-zero after printing a concise,
 user-friendly message (never a raw internal stack trace for user input errors)
 and, when applicable, the flag or usage hint that fixes it. Scripts and agents
 branch on the exit code before reading output.

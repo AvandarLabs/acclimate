@@ -1,4 +1,4 @@
-import { CLIError } from "@/CLIError";
+import { CliError } from "@/CliError";
 import { makeTerminalSessionFromPromptIo } from "@/terminalSession/makeTerminalSessionFromPromptIo/makeTerminalSessionFromPromptIo";
 import { openTerminalSession } from "@/terminalSession/openTerminalSession/openTerminalSession";
 import { makeThemeFromOptions } from "@/theme/makeThemeFromOptions/makeThemeFromOptions";
@@ -185,7 +185,7 @@ function _createRawMenuListeners<TValue extends string>(options: {
   const onCancel = () => {
     finish(() => {
       session.output.write(`${theme.warning("✖ Cancelled")}\n`);
-      onReject(CLIError.promptCancelled({ cliName }));
+      onReject(CliError.promptCancelled({ cliName }));
     });
   };
   const onConfirm = (chosenItem: Readonly<ChoiceMenuItem<TValue>>) => {
@@ -285,7 +285,7 @@ export async function requestChoiceMenu<TValue extends string = string>(
   const cliName = options.cliName ?? "acclimate";
   const session = await _openMenuTerminalSession(options);
   if (!session) {
-    throw CLIError.interactiveInputUnavailable({
+    throw CliError.interactiveInputUnavailable({
       cliName,
       message: `Interactive menu "${options.message}" requires a terminal.`,
     });

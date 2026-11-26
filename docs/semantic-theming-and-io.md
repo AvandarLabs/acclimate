@@ -43,7 +43,7 @@ env.NO_COLOR !== ""`). An empty `NO_COLOR=""` does not disable color.
 
 Plain mode preserves all readable text, emoji (`✅`, `ℹ️`, `⚠️`, `❌`), textual
 menu cursors (`❯`), progress lines, and indented recovery hints while emitting
-zero ANSI escape sequences. `formatCLIError` also sanitizes pre-attached
+zero ANSI escape sequences. `formatCliError` also sanitizes pre-attached
 `error.usage` through `stripAnsi` when plain mode is active.
 
 ### Customizing Themes and Status Helpers
@@ -75,13 +75,13 @@ zero ANSI escape sequences. `formatCLIError` also sanitizes pre-attached
 ## Injectable Execution IO and Exit-Code Propagation
 
 Acclimate never calls `process.exit()` inside library code. All three execution
-boundaries (`Acclimate.run`, `Acclimate.execute`, and `executeCLI`) return
+boundaries (`Acclimate.run`, `Acclimate.execute`, and `executeCli`) return
 `Promise<number>`:
 
 - `0`: command action succeeded, `-h`/`--help` printed to `stdout`, or
   unattended actionless command printed usage to `stdout`.
 - `130`: user cancelled an interactive prompt or choice menu (`Ctrl-C`/`EOF`).
-- `1`: unknown flag, missing option value, validation/parsing `CLIError`,
+- `1`: unknown flag, missing option value, validation/parsing `CliError`,
   unattended missing required parameter, or uncaught error in `.action()`.
 
 ### `Acclimate.run(cli, options?)` vs `Acclimate.execute(cli, options?)`
@@ -103,7 +103,7 @@ close? }`. `makeTerminalSessionFromPromptIo` derives color and raw-mode
 
 ### Async-Scoped Execution Context (`ExecutionIoContext`)
 
-`runCLI` runs tokenization, help rendering, prompting, and `.action()` inside a
+`runCli` runs tokenization, help rendering, prompting, and `.action()` inside a
 Node `AsyncLocalStorage` store (`ExecutionIoContext`). Inside a command action:
 
 - `stdout` helpers (`Acclimate.writeData`, `Acclimate.writeJson`) write to the

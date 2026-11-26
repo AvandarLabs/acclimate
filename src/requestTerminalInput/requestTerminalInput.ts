@@ -1,11 +1,11 @@
-import { CLIError } from "@/CLIError";
+import { CliError } from "@/CliError";
 import { generateTerminalMessage } from "@/generateTerminalMessage";
 import { requestChoiceMenu } from "@/requestChoiceMenu/requestChoiceMenu";
 import { createLineReader } from "@/terminalSession/createLineReader/createLineReader";
 import { makeTerminalSessionFromPromptIo } from "@/terminalSession/makeTerminalSessionFromPromptIo/makeTerminalSessionFromPromptIo";
 import { openTerminalSession } from "@/terminalSession/openTerminalSession/openTerminalSession";
 import { makeThemeFromOptions } from "@/theme/makeThemeFromOptions/makeThemeFromOptions";
-import type { CLIParamScalarValue } from "@/AcclimateCLI/AcclimateCLI.types";
+import type { CliParamScalarValue } from "@/AcclimateCli/AcclimateCli.types";
 import type { ChoiceMenuItem } from "@/requestChoiceMenu/requestChoiceMenu.types";
 import type { TerminalLineReader } from "@/terminalSession/createLineReader/createLineReader";
 import type {
@@ -27,10 +27,10 @@ export type RequestTerminalInputResponseOptions = {
    * Default value returned when the user submits an empty response (or when
    * optional and running unattended).
    */
-  defaultValue?: CLIParamScalarValue;
+  defaultValue?: CliParamScalarValue;
 
   /** Allowed discrete values; when present, renders an interactive choice menu. */
-  choices?: readonly CLIParamScalarValue[];
+  choices?: readonly CliParamScalarValue[];
 
   /** Optional validator returning `true` or an inline error string to retry. */
   validate?: (rawValue: string) => boolean | string;
@@ -53,7 +53,7 @@ export type RequestTerminalInputOptions = {
   theme?: ThemeInput;
 };
 
-function _scalarToString(value: CLIParamScalarValue): string {
+function _scalarToString(value: CliParamScalarValue): string {
   return (
     typeof value === "string" ? value
     : typeof value === "number" ? String(value)
@@ -146,7 +146,7 @@ async function _promptViaChoiceMenu(options: {
 async function _promptBooleanMenu(options: {
   session: Readonly<TerminalSession>;
   heading: string;
-  defaultValue: CLIParamScalarValue | undefined;
+  defaultValue: CliParamScalarValue | undefined;
   cliName: string;
   theme: SemanticTheme;
 }): Promise<string> {
@@ -336,7 +336,7 @@ async function _promptWithSession(
  * `choices` and raw-TTY `boolean` prompts to `requestChoiceMenu` and failing
  * fast in unattended mode instead of hanging on piped `stdin`.
  *
- * Used by `Acclimate.requestInput` and `promptCLIParam`.
+ * Used by `Acclimate.requestInput` and `promptCliParam`.
  */
 export async function requestTerminalInput(
   options: Readonly<RequestTerminalInputOptions>,
@@ -354,7 +354,7 @@ export async function requestTerminalInput(
     const plainMessage = generateTerminalMessage(message, params, {
       color: false,
     });
-    throw CLIError.interactiveInputUnavailable({
+    throw CliError.interactiveInputUnavailable({
       cliName,
       message: `Required prompt "${plainMessage}" cannot run without an interactive terminal.`,
     });

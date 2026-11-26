@@ -1,9 +1,9 @@
 import { Acclimate } from "../src/Acclimate/Acclimate";
 
-const DevDBCLI = Acclimate.createCLI("db").description("Database tools");
-const DevWebCLI = Acclimate.createCLI("web").description("Web tools");
+const DevDBCli = Acclimate.createCli("db").description("Database tools");
+const DevWebCli = Acclimate.createCli("web").description("Web tools");
 
-const DevCLI = Acclimate.createCLI("dev")
+const DevCli = Acclimate.createCli("dev")
   .description("Run the dev workflow")
   .addPositionalArg({
     name: "target",
@@ -82,8 +82,8 @@ const DevCLI = Acclimate.createCLI("dev")
       message: "Which profile should I use?",
     },
   })
-  .addCommand("db", DevDBCLI)
-  .addCommand("web", DevWebCLI)
+  .addCommand("db", DevDBCli)
+  .addCommand("web", DevWebCli)
   .action(
     ({
       target,
@@ -129,8 +129,8 @@ const DevCLI = Acclimate.createCLI("dev")
     },
   );
 
-const cli = Acclimate.createCLI("demo-cli")
+const cli = Acclimate.createCli("demo-cli")
   .description("This is a demo CLI")
-  .addCommand("dev", DevCLI);
+  .addCommand("dev", DevCli);
 
 await Acclimate.run(cli);
