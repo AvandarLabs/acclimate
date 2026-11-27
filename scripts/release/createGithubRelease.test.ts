@@ -21,8 +21,8 @@ function _deps(
       return Promise.resolve("abc123def456\n");
     },
     runGh: vi.fn((args: readonly string[]) => {
-      return args[0] === "release" && args[1] === "view" ?
-          Promise.reject(new Error("release not found"))
+      return args[0] === "release" && args[1] === "view"
+        ? Promise.reject(new Error("release not found"))
         : Promise.resolve("");
     }),
     log: () => {},

@@ -31,9 +31,8 @@ export function createMockTerminalSession(
   const mockInput = Object.assign(inputStream, {
     isTTY: true,
     isRaw: false,
-    setRawMode:
-      options.isRawModeSupported ?
-        (mode: boolean) => {
+    setRawMode: options.isRawModeSupported
+      ? (mode: boolean) => {
           rawModeCalls.push(mode);
           mockInput.isRaw = mode;
         }

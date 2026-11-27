@@ -24,11 +24,11 @@ function _createPromptIo(
     isTTY: options.isTty ?? true,
     isRaw: false,
     setRawMode:
-      options.isRawModeSupported !== false ?
-        (mode: boolean) => {
-          input.isRaw = mode;
-        }
-      : undefined,
+      options.isRawModeSupported !== false
+        ? (mode: boolean) => {
+            input.isRaw = mode;
+          }
+        : undefined,
   });
   const output = _createMemoryStream(options.isTty ?? true);
   return { input, output };

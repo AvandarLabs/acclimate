@@ -87,15 +87,15 @@ function _buildHelpSections(
   const hasAnyOptions =
     optionParams.length > 0 || globalOptionParams.length > 0;
   return [
-    level === 1 ?
-      formatHelpUsageSection({
-        displayName,
-        state,
-        hasCommands: sortedCommands.length > 0,
-        hasAnyOptions,
-        theme,
-      })
-    : [],
+    level === 1
+      ? formatHelpUsageSection({
+          displayName,
+          state,
+          hasCommands: sortedCommands.length > 0,
+          hasAnyOptions,
+          theme,
+        })
+      : [],
     formatHelpParamSection({
       title: "Positional Arguments",
       params: state.positionalArgs,
@@ -107,9 +107,9 @@ function _buildHelpSections(
       params: globalOptionParams,
       theme,
     }),
-    level === 1 ?
-      formatHelpExamplesSection({ examples: state.examples, theme })
-    : [],
+    level === 1
+      ? formatHelpExamplesSection({ examples: state.examples, theme })
+      : [],
     formatHelpCommandSection({ sortedCommands, level, theme }),
   ].filter((section) => {
     return section.length > 0;
@@ -220,9 +220,9 @@ export function generateHelpText<
   options?: Readonly<GenerateHelpTextOptions>,
 ): string {
   const displayName =
-    options?.commandPath && options.commandPath.length > 0 ?
-      options.commandPath.join(" ")
-    : cli.getName();
+    options?.commandPath && options.commandPath.length > 0
+      ? options.commandPath.join(" ")
+      : cli.getName();
   const theme = makeThemeFromOptions({
     theme: options?.theme,
     color: options?.color,

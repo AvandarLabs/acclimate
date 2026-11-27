@@ -128,11 +128,11 @@ function _capitalize(text: string): string {
 function _subjectToNoteText(subject: string): string {
   const branchName = mergeSubjectToBranchName(subject);
   const cleaned =
-    branchName === undefined ?
-      subject
-        .replace(/^[a-z]+(?:\([^)]+\))?!?:\s+/, "")
-        .replace(/\s*\(#\d+\)$/, "")
-    : (branchName.split("/").at(-1) ?? branchName).replace(/[-_]/g, " ");
+    branchName === undefined
+      ? subject
+          .replace(/^[a-z]+(?:\([^)]+\))?!?:\s+/, "")
+          .replace(/\s*\(#\d+\)$/, "")
+      : (branchName.split("/").at(-1) ?? branchName).replace(/[-_]/g, " ");
   return `${_capitalize(cleaned.trim().replace(/\.$/, ""))}.`;
 }
 
@@ -173,9 +173,9 @@ export function resolveNoteBumps(params: {
     });
     const modelBump = note.bump === "major" ? "minor" : note.bump;
     const bump =
-      knownBumps.length === cited.length ?
-        maxBumpLevel(knownBumps)
-      : maxBumpLevel([...knownBumps, modelBump]);
+      knownBumps.length === cited.length
+        ? maxBumpLevel(knownBumps)
+        : maxBumpLevel([...knownBumps, modelBump]);
     if (bump === "none") {
       return [];
     }

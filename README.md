@@ -366,8 +366,8 @@ npm install
 - `npm run demo` — execute the `examples/basic.ts` sample with tsx.
 - `npm test` — run the Vitest suite once.
 - `npm run test:watch` — run tests in watch mode.
-- `npm run lint` / `npm run lint:fix` — check or auto-fix with ESLint.
-- `npm run format` / `npm run format:fix` — check or write Prettier
+- `npm run lint` / `npm run lint:fix` — check or auto-fix with oxlint.
+- `npm run format` / `npm run format:check` — write or check oxfmt
   formatting.
 - `npm run type` - check typescript types
 

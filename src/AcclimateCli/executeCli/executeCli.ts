@@ -75,9 +75,11 @@ export async function executeCli(
     const exitCode =
       error instanceof CliError && error.code === "prompt_cancelled" ? 130 : 1;
     const errorOutput =
-      error instanceof CliError ? formatCliError(error, { theme: stderrTheme })
-      : error instanceof Error ? (error.stack ?? error.message)
-      : String(error);
+      error instanceof CliError
+        ? formatCliError(error, { theme: stderrTheme })
+        : error instanceof Error
+          ? (error.stack ?? error.message)
+          : String(error);
     stderr.write(`${errorOutput}\n`);
     options.onExitCode?.(exitCode);
     return exitCode;

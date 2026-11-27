@@ -8,11 +8,9 @@
 - Source lives in `src/` as ESM TypeScript (`"type": "module"`). `tsup` bundles
   `src/index.ts` into dual ESM (`dist/index.js`) and CJS (`dist/index.cjs`)
   outputs plus `.d.ts` declarations targeting `node18`.
-- Tooling: `npm` for package management, `vitest` for tests, `eslint`
-  (`typescript-eslint`, `eslint-plugin-import-x`,
-  `eslint-plugin-unused-imports`) for linting, `prettier` (with
-  `@ianvs/prettier-plugin-sort-imports`) for formatting, `tsc --noEmit` for
-  type-checking, and `tsx` for running `examples/basic.ts`.
+- Tooling: `npm` for package management, `vitest` for tests, `oxlint` for
+  linting, `oxfmt` for formatting (including import sorting), `tsc --noEmit`
+  for type-checking, and `tsx` for running `examples/basic.ts`.
 - Runtime dependencies stay minimal (`change-case`, `ts-pattern`).
 
 ## Documentation
@@ -53,7 +51,7 @@
 Before writing code:
 
 - Determine which files in `docs/` are relevant to read.
-- Determine which available skills are relevant. Run `npx skills list` to see
+- Determine which available skills are relevant. Run `npm run skills` to see
   what this project has installed.
 - Determine which tests, if any, need to be written to test the requested
   functionality.
@@ -125,9 +123,10 @@ npm run demo            # run examples/basic.ts with tsx
 npm run type            # run the TypeScript compiler without emitting
 npm test                # run the test suite with vitest
 npm run test:watch      # run vitest in watch mode
-npm run lint            # lint with eslint
-npm run lint:fix        # lint and auto-fix with eslint
-npm run format          # format files with prettier
+npm run lint            # lint with oxlint
+npm run lint:fix        # lint and auto-fix with oxlint
+npm run format          # format files with oxfmt
+npm run format:check    # check formatting with oxfmt without writing
 ```
 
 Run `npm run type`, `npm run lint`, `npm test`, and `npm run build` before
@@ -185,11 +184,10 @@ The rules for this project's language, runtime, and CLI design live in
 - **Never create or edit anything under `.agents/`, `.claude/skills/`,
   `.codex/`, `.cursor/skills/`, or `.opencode/`.** Those directories are
   generated and gitignored: `skills-lock.json` is the only skills file in git.
-- Common commands:
-  - `npx skills list`: list installed project skills.
-  - `npx skills experimental_install`: restore locked skills from
-    `skills-lock.json` on a fresh clone.
-  - `npx skills update`: update installed skills to their latest versions.
+- Common commands (the wrapper lives in `scripts/skills`):
+  - `npm run skills`: list installed project skills.
+  - `npm run skills:install`: restore locked skills on a fresh clone.
+  - `npm run skills:update`: update installed skills to their latest versions.
 - To add or remove a skill, use `npx skills add` or `npx skills remove` and
   commit the resulting `skills-lock.json` change in the same commit.
 - See [`docs/skills.md`](docs/skills.md) for full details on how project skills

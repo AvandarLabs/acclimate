@@ -77,25 +77,25 @@ src/
 
 <small>
 
-| Unit | What it is |
-| --- | --- |
-| `src/index.ts` | Public package entry point. Exports `createTheme`, `stripAnsi`, palette constants, `Acclimate`, `executeCLI`, `generateHelpText`, prompt helpers, and their public types. |
-| `src/Acclimate/Acclimate.ts` | Public facade implementing `run`, `execute`, `theme`, `createTheme`, `setTheme`, `resetTheme`, `log`, `printSuccess`, `printInfo`, `printWarn`, `printError`, `writeData`, `writeJson`, `requestInput`, and `requestChoice`. |
-| `src/Acclimate/Acclimate.types.ts` | Option and facade type declarations (`AcclimateRunOptions`, `AcclimateLogOptions`, `AcclimateStatusPrintOptions`, `AcclimateErrorPrintOptions`, `AcclimateFacade`). |
-| `theme.constants.ts` | Single source of truth for `ANSI_RESET_CODE`, `ANSI_STYLE_CODES`, `SEMANTIC_THEME_ROLES`, and `DEFAULT_DARK_THEME_PALETTE`. |
-| `theme.types.ts` | Types derived from `theme.constants.ts` covering `SemanticThemeRole`, `AnsiStyleToken`, `SemanticThemePalette`, `SemanticTheme`, and `ThemeInput`. |
-| `stripAnsi.ts` | Removes ANSI CSI color and cursor-control sequences while preserving text, newlines, and emoji. |
-| `createTheme.ts` | Pure builder constructing a semantic theme whose role methods emit bright-half ANSI sequences only when color is enabled for the target stream and environment. |
-| `makeThemeFromOptions.ts` | Normalizes a caller's optional `ThemeInput`, explicit `color`, `stream`, `isTTY`, `env`, and `fallbackPalette` into one concrete `SemanticTheme`. |
-| `generateTerminalMessage.ts` | Interpolates `$varName$` tokens and applies both raw `\|<COLOR>\|` and semantic `\|<ROLE>\|` tokens, or strips known tokens in plain mode<sup>G3</sup>. |
-| `isColorEnabledForStream.ts` | Single stream color gate returning `true` only when `isTTY` (explicit override or `stream.isTTY`) is `true`, `NO_COLOR` is unset or empty, and `TERM` is not `"dumb"`. |
-| `makeTerminalSessionFromPromptIo.ts` | Adapts a lightweight `PromptIo` pair into a `TerminalSession`, deriving color and raw-mode capabilities from the output stream and environment. |
-| `ExecutionIoContext.ts` | Node `AsyncLocalStorage` container scoping injected streams, environment, per-stream themes, and prompt IO<sup>G4</sup> across async command actions. |
-| `helpSectionHelpers.ts` | Semantic section formatters (`formatHelpUsageSection`, `formatHelpParamSection`, `formatHelpExamplesSection`, `formatHelpCommandSection`, `getBuiltinHelpOption`) extracted from `generateHelpText`. |
-| `generateHelpText.ts` | Renders command help via `SemanticTheme`, accepting `commandPath`, `color`, `theme`, `stream`, `isTTY`, and `env`. |
-| `formatCLIError.ts` | Formats `CLIError` headlines (`error`), indented `⚠️` recovery hints (`warning`), and command usage sanitized via `stripAnsi` when plain mode<sup>G3</sup> is active. |
-| `runCLI.ts` | Resolves `stdout` and `stderr` TTY overrides, builds independent per-stream themes, enters `ExecutionIoContext`, and runs tokenization, prompting, help output, and `.action()`. |
-| `executeCLI.ts` | Process and embedded execution boundary accepting `args` or `input`, TTY overrides, `promptIo`, and `theme`, catching errors to `stderr` and returning `0`, `1`, or `130`. |
+| Unit                                 | What it is                                                                                                                                                                                                                   |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/index.ts`                       | Public package entry point. Exports `createTheme`, `stripAnsi`, palette constants, `Acclimate`, `executeCLI`, `generateHelpText`, prompt helpers, and their public types.                                                    |
+| `src/Acclimate/Acclimate.ts`         | Public facade implementing `run`, `execute`, `theme`, `createTheme`, `setTheme`, `resetTheme`, `log`, `printSuccess`, `printInfo`, `printWarn`, `printError`, `writeData`, `writeJson`, `requestInput`, and `requestChoice`. |
+| `src/Acclimate/Acclimate.types.ts`   | Option and facade type declarations (`AcclimateRunOptions`, `AcclimateLogOptions`, `AcclimateStatusPrintOptions`, `AcclimateErrorPrintOptions`, `AcclimateFacade`).                                                          |
+| `theme.constants.ts`                 | Single source of truth for `ANSI_RESET_CODE`, `ANSI_STYLE_CODES`, `SEMANTIC_THEME_ROLES`, and `DEFAULT_DARK_THEME_PALETTE`.                                                                                                  |
+| `theme.types.ts`                     | Types derived from `theme.constants.ts` covering `SemanticThemeRole`, `AnsiStyleToken`, `SemanticThemePalette`, `SemanticTheme`, and `ThemeInput`.                                                                           |
+| `stripAnsi.ts`                       | Removes ANSI CSI color and cursor-control sequences while preserving text, newlines, and emoji.                                                                                                                              |
+| `createTheme.ts`                     | Pure builder constructing a semantic theme whose role methods emit bright-half ANSI sequences only when color is enabled for the target stream and environment.                                                              |
+| `makeThemeFromOptions.ts`            | Normalizes a caller's optional `ThemeInput`, explicit `color`, `stream`, `isTTY`, `env`, and `fallbackPalette` into one concrete `SemanticTheme`.                                                                            |
+| `generateTerminalMessage.ts`         | Interpolates `$varName$` tokens and applies both raw `\|<COLOR>\|` and semantic `\|<ROLE>\|` tokens, or strips known tokens in plain mode<sup>G3</sup>.                                                                      |
+| `isColorEnabledForStream.ts`         | Single stream color gate returning `true` only when `isTTY` (explicit override or `stream.isTTY`) is `true`, `NO_COLOR` is unset or empty, and `TERM` is not `"dumb"`.                                                       |
+| `makeTerminalSessionFromPromptIo.ts` | Adapts a lightweight `PromptIo` pair into a `TerminalSession`, deriving color and raw-mode capabilities from the output stream and environment.                                                                              |
+| `ExecutionIoContext.ts`              | Node `AsyncLocalStorage` container scoping injected streams, environment, per-stream themes, and prompt IO<sup>G4</sup> across async command actions.                                                                        |
+| `helpSectionHelpers.ts`              | Semantic section formatters (`formatHelpUsageSection`, `formatHelpParamSection`, `formatHelpExamplesSection`, `formatHelpCommandSection`, `getBuiltinHelpOption`) extracted from `generateHelpText`.                         |
+| `generateHelpText.ts`                | Renders command help via `SemanticTheme`, accepting `commandPath`, `color`, `theme`, `stream`, `isTTY`, and `env`.                                                                                                           |
+| `formatCLIError.ts`                  | Formats `CLIError` headlines (`error`), indented `⚠️` recovery hints (`warning`), and command usage sanitized via `stripAnsi` when plain mode<sup>G3</sup> is active.                                                        |
+| `runCLI.ts`                          | Resolves `stdout` and `stderr` TTY overrides, builds independent per-stream themes, enters `ExecutionIoContext`, and runs tokenization, prompting, help output, and `.action()`.                                             |
+| `executeCLI.ts`                      | Process and embedded execution boundary accepting `args` or `input`, TTY overrides, `promptIo`, and `theme`, catching errors to `stderr` and returning `0`, `1`, or `130`.                                                   |
 
 </small>
 
@@ -131,18 +131,18 @@ flowchart TD
 
 Terminals do not reliably expose whether they use a light or dark background, and standard ANSI foreground codes `30`-`37` (such as dark red `\x1b[31m` and dark blue `\x1b[34m`) have poor contrast on black terminal themes. `DEFAULT_DARK_THEME_PALETTE` in `src/theme/theme.constants.ts` maps all ten semantic roles<sup>G5</sup> exclusively to the bright-half ANSI palette<sup>G1</sup> (`90`-`97`, plus bold `\x1b[1m` on `selected`):
 
-| Role | Default ANSI prefix | Usage |
-| --- | --- | --- |
-| `heading` | `\x1b[93m` (`bright_yellow`) | Help section titles (`Usage`, `Options`, `Commands`, `Examples`) |
-| `accent` | `\x1b[96m` (`bright_cyan`) | CLI and sub-command names |
-| `value` | `\x1b[97m` (`bright_white`) | Option/argument names, worked examples, command bullets |
-| `muted` | `\x1b[90m` (`bright_black`) | Descriptions, `(optional)`, `(default)`, `[choices: ...]`, key hints |
-| `success` | `\x1b[92m` (`bright_green`) | `✅` status banners and `✔` menu confirmations |
-| `warning` | `\x1b[93m` (`bright_yellow`) | `⚠️` warnings, indented recovery hints, `✖ Cancelled` |
-| `error` | `\x1b[91m` (`bright_red`) | `❌` failure lines, `required` markers, inline validation retries |
-| `info` | `\x1b[94m` (`bright_blue`) | `ℹ️` progress and status lines |
-| `prompt` | `\x1b[96m` (`bright_cyan`) | Interactive prompt questions |
-| `selected` | `\x1b[1m\x1b[92m` (`bold` + `bright_green`) | Highlighted choice menu item beside the `❯` cursor |
+| Role       | Default ANSI prefix                         | Usage                                                                |
+| ---------- | ------------------------------------------- | -------------------------------------------------------------------- |
+| `heading`  | `\x1b[93m` (`bright_yellow`)                | Help section titles (`Usage`, `Options`, `Commands`, `Examples`)     |
+| `accent`   | `\x1b[96m` (`bright_cyan`)                  | CLI and sub-command names                                            |
+| `value`    | `\x1b[97m` (`bright_white`)                 | Option/argument names, worked examples, command bullets              |
+| `muted`    | `\x1b[90m` (`bright_black`)                 | Descriptions, `(optional)`, `(default)`, `[choices: ...]`, key hints |
+| `success`  | `\x1b[92m` (`bright_green`)                 | `✅` status banners and `✔` menu confirmations                       |
+| `warning`  | `\x1b[93m` (`bright_yellow`)                | `⚠️` warnings, indented recovery hints, `✖ Cancelled`                |
+| `error`    | `\x1b[91m` (`bright_red`)                   | `❌` failure lines, `required` markers, inline validation retries    |
+| `info`     | `\x1b[94m` (`bright_blue`)                  | `ℹ️` progress and status lines                                       |
+| `prompt`   | `\x1b[96m` (`bright_cyan`)                  | Interactive prompt questions                                         |
+| `selected` | `\x1b[1m\x1b[92m` (`bold` + `bright_green`) | Highlighted choice menu item beside the `❯` cursor                   |
 
 `createTheme` (`src/theme/createTheme/createTheme.ts`) converts each palette override from either a named token (`"bright_magenta"`), an ordered token array (`["bold", "bright_cyan"]`), or a raw ANSI SGR sequence (`"\x1b[38;5;117m"`), falling back to `DEFAULT_DARK_THEME_PALETTE` for every omitted role. When `isColorEnabled` is `false`, `style(role, text)` returns `text` unchanged; when `text` is `""`, it also returns `""` so empty segments never emit stray `\x1b[0m` reset sequences.
 
@@ -305,12 +305,12 @@ Splitting `src/Acclimate.ts` into `src/Acclimate/Acclimate.ts` and `src/Acclimat
 
 <small>
 
-| Term | Meaning |
-| --- | --- |
-| **G1** Bright-half ANSI palette | ANSI SGR foreground color codes `90` through `97` (such as `\x1b[91m` bright red and `\x1b[96m` bright cyan), chosen over dark codes `30`-`37` so default CLI text stays readable on dark terminal backgrounds. |
-| **G2** Execution IO context | The `AsyncLocalStorage` store (`ExecutionIoContext`) bound during `runCLI` so `Acclimate.*` helpers called inside an async `.action()` route to that run's injected `stdout`, `stderr`, `env`, themes, and prompt IO<sup>G4</sup> without leaking across concurrent runs. |
-| **G3** Plain mode | Output mode active whenever the target stream is not a TTY, `NO_COLOR` is non-empty, or `TERM` equals `"dumb"`. Disables all ANSI escape sequences while keeping text, emoji, textual menu cursors (`❯`), and recovery hints intact. |
-| **G4** Prompt IO | Lightweight injectable `{ input, output, isColorEnabled?, isRawModeSupported?, close? }` contract (`PromptIo`) adapted into a `TerminalSession` by `makeTerminalSessionFromPromptIo` for interactive tests and embedded callers. |
-| **G5** Semantic role | Named visual meaning (`heading`, `accent`, `value`, `muted`, `success`, `warning`, `error`, `info`, `prompt`, `selected`) mapped to an ANSI prefix by a `SemanticTheme` so callers style by intent rather than hardcoding raw color codes. |
+| Term                            | Meaning                                                                                                                                                                                                                                                                   |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **G1** Bright-half ANSI palette | ANSI SGR foreground color codes `90` through `97` (such as `\x1b[91m` bright red and `\x1b[96m` bright cyan), chosen over dark codes `30`-`37` so default CLI text stays readable on dark terminal backgrounds.                                                           |
+| **G2** Execution IO context     | The `AsyncLocalStorage` store (`ExecutionIoContext`) bound during `runCLI` so `Acclimate.*` helpers called inside an async `.action()` route to that run's injected `stdout`, `stderr`, `env`, themes, and prompt IO<sup>G4</sup> without leaking across concurrent runs. |
+| **G3** Plain mode               | Output mode active whenever the target stream is not a TTY, `NO_COLOR` is non-empty, or `TERM` equals `"dumb"`. Disables all ANSI escape sequences while keeping text, emoji, textual menu cursors (`❯`), and recovery hints intact.                                      |
+| **G4** Prompt IO                | Lightweight injectable `{ input, output, isColorEnabled?, isRawModeSupported?, close? }` contract (`PromptIo`) adapted into a `TerminalSession` by `makeTerminalSessionFromPromptIo` for interactive tests and embedded callers.                                          |
+| **G5** Semantic role            | Named visual meaning (`heading`, `accent`, `value`, `muted`, `success`, `warning`, `error`, `info`, `prompt`, `selected`) mapped to an ANSI prefix by a `SemanticTheme` so callers style by intent rather than hardcoding raw color codes.                                |
 
 </small>

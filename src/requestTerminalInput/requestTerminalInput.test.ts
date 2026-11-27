@@ -18,9 +18,8 @@ function _createTestTerminal(
   const mockInput = Object.assign(input, {
     isTTY: options.isRawModeSupported ?? false,
     isRaw: false,
-    setRawMode:
-      options.isRawModeSupported ?
-        (mode: boolean) => {
+    setRawMode: options.isRawModeSupported
+      ? (mode: boolean) => {
           rawModeCalls.push(mode);
           mockInput.isRaw = mode;
         }

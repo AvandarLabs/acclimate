@@ -36,20 +36,27 @@ All generated skill directories and per-frontend links/config are gitignored:
 
 ## Common commands
 
+A small wrapper under `scripts/skills/` (built on Acclimate itself) gives one
+place to ask what is installed and one place to bring it up to date:
+
 ```sh
-# List skills installed for this project
-npx skills list
-
-# Restore skills from skills-lock.json on a fresh clone
-npx skills experimental_install
-
-# Update project skills to their latest versions
-npx skills update
+npm run skills           # list every skill, flagging any missing from disk
+npm run skills:install   # install locked skills that are not on disk yet
+npm run skills:update    # update every skill to its latest version
 ```
 
-Install and update are intentionally separate: restoring from
-`skills-lock.json` materializes the locked skill set, while `npx skills update`
-deliberately upgrades skills to newer upstream versions.
+- `skills:install` only adds what `skills-lock.json` asks for and is missing,
+  the way `npm install` does for packages. It never re-resolves an installed
+  skill.
+- `skills:update` runs `scripts/skills/update-skills.sh`, a plain shell script
+  on purpose: it runs `npx skills update`, then updates each skill listed in
+  its `SELF_INSTALLING_SKILLS` variable through that skill's own CLI. The list
+  is empty here because every skill is managed by `npx skills`.
+- There is deliberately no `postinstall` hook: this package is published, and a
+  `postinstall` script would run on every consumer's install. Run
+  `npm run skills:install` after a fresh clone.
+- The raw `npx skills list`, `npx skills experimental_install`, and
+  `npx skills update` commands still work and are what the wrapper calls.
 
 ## Adding or removing skills
 

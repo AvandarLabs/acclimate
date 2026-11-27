@@ -416,9 +416,9 @@ import type { CLIError } from "@/CLIError";
 export function formatCLIError(error: CLIError): string {
   const headerLines = [
     generateTerminalMessage(`|red|${error.message}|reset|`),
-    error.hint !== undefined ?
-      generateTerminalMessage(`  |yellow|⚠️ ${error.hint}|reset|`)
-    : undefined,
+    error.hint !== undefined
+      ? generateTerminalMessage(`  |yellow|⚠️ ${error.hint}|reset|`)
+      : undefined,
   ].filter((line): line is string => {
     return line !== undefined;
   });
@@ -615,9 +615,11 @@ export async function executeCLI(
     return 0;
   } catch (error) {
     const errorOutput =
-      error instanceof CLIError ? formatCLIError(error)
-      : error instanceof Error ? (error.stack ?? error.message)
-      : String(error);
+      error instanceof CLIError
+        ? formatCLIError(error)
+        : error instanceof Error
+          ? (error.stack ?? error.message)
+          : String(error);
     stderr.write(`${errorOutput}\n`);
     options.onExitCode?.(1);
     return 1;

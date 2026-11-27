@@ -249,12 +249,12 @@ async function _openMenuTerminalSession<TValue extends string>(
 ): Promise<TerminalSession | undefined> {
   const injectedSession =
     options.terminal ??
-    (options.promptIo ?
-      makeTerminalSessionFromPromptIo({
-        promptIo: options.promptIo,
-        env: options.env,
-      })
-    : undefined);
+    (options.promptIo
+      ? makeTerminalSessionFromPromptIo({
+          promptIo: options.promptIo,
+          env: options.env,
+        })
+      : undefined);
   return openTerminalSession({
     session: injectedSession,
     interactive: options.interactive,
@@ -304,8 +304,8 @@ export async function requestChoiceMenu<TValue extends string = string>(
       cliName,
       theme,
     };
-    return session.isRawModeSupported ?
-        await _runRawChoiceMenu({ ...shared, hint: options.hint })
+    return session.isRawModeSupported
+      ? await _runRawChoiceMenu({ ...shared, hint: options.hint })
       : await runPlainChoiceMenu(shared);
   } finally {
     await session.close();

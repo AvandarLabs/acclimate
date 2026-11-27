@@ -96,9 +96,9 @@ function _buildExecutionStore(
   );
   const terminal =
     options.terminal ??
-    (options.promptIo ?
-      makeTerminalSessionFromPromptIo({ promptIo: options.promptIo, env })
-    : undefined);
+    (options.promptIo
+      ? makeTerminalSessionFromPromptIo({ promptIo: options.promptIo, env })
+      : undefined);
 
   return {
     stdin,
@@ -127,9 +127,9 @@ function _createLazyTerminalController(options: {
 }): LazyTerminalController {
   const { store, isNoPromptRequested } = options;
   const effectiveInteractive =
-    store.interactive === false || isNoPromptRequested ?
-      false
-    : store.interactive;
+    store.interactive === false || isNoPromptRequested
+      ? false
+      : store.interactive;
 
   let cachedSession: TerminalSession | undefined;
   let didAttemptOpen = false;

@@ -54,12 +54,13 @@ export type RequestTerminalInputOptions = {
 };
 
 function _scalarToString(value: CliParamScalarValue): string {
-  return (
-    typeof value === "string" ? value
-    : typeof value === "number" ? String(value)
-    : value ? "true"
-    : "false"
-  );
+  return typeof value === "string"
+    ? value
+    : typeof value === "number"
+      ? String(value)
+      : value
+        ? "true"
+        : "false";
 }
 
 function _buildLinePromptText(options: {
@@ -70,10 +71,11 @@ function _buildLinePromptText(options: {
 }): string {
   const { required, type, defaultValue } = options.responseOptions;
   const notice =
-    defaultValue !== undefined ?
-      ` ${options.theme.muted("(press Enter to use default)")}`
-    : required ? ""
-    : ` ${options.theme.muted("(press Enter to leave empty)")}`;
+    defaultValue !== undefined
+      ? ` ${options.theme.muted("(press Enter to use default)")}`
+      : required
+        ? ""
+        : ` ${options.theme.muted("(press Enter to leave empty)")}`;
   const defaultNotice =
     defaultValue !== undefined ? ` [default: ${defaultValue}]` : "";
   const booleanNotice = type === "boolean" ? " (y/n)" : "";
@@ -98,9 +100,9 @@ function _validateCustomRule(options: {
     return undefined;
   }
   const message =
-    typeof validationResult === "string" ? validationResult : (
-      "That value is not valid."
-    );
+    typeof validationResult === "string"
+      ? validationResult
+      : "That value is not valid.";
   return `${options.theme.error(message)} Please try again.\n`;
 }
 
@@ -118,9 +120,8 @@ async function _promptViaChoiceMenu(options: {
     return { value: stringValue, label: stringValue };
   });
   const canSkip = !required && defaultValue === undefined;
-  const menuChoices: ChoiceMenuItem[] =
-    canSkip ?
-      [
+  const menuChoices: ChoiceMenuItem[] = canSkip
+    ? [
         ...baseChoices,
         {
           value: SKIP_CHOICE_VALUE,
@@ -151,11 +152,11 @@ async function _promptBooleanMenu(options: {
   theme: SemanticTheme;
 }): Promise<string> {
   const defaultSelection =
-    typeof options.defaultValue === "boolean" ?
-      options.defaultValue ?
-        "true"
-      : "false"
-    : undefined;
+    typeof options.defaultValue === "boolean"
+      ? options.defaultValue
+        ? "true"
+        : "false"
+      : undefined;
 
   return requestChoiceMenu({
     message: options.heading,
@@ -185,8 +186,8 @@ function _evaluateEmptyAnswer(options: {
       value: _scalarToString(responseOptions.defaultValue),
     };
   }
-  return responseOptions.required ?
-      {
+  return responseOptions.required
+    ? {
         status: "retry",
         errorMessage: `${theme.error("This value is required.")} Please enter a value.\n`,
       }
@@ -230,8 +231,8 @@ function _evaluateLineAnswer(options: {
     validate: responseOptions.validate,
     theme,
   });
-  return customError !== undefined ?
-      { status: "retry", errorMessage: customError }
+  return customError !== undefined
+    ? { status: "retry", errorMessage: customError }
     : { status: "accepted", value: answer };
 }
 
@@ -260,12 +261,12 @@ async function _openInputTerminalSession(
 ): Promise<TerminalSession | undefined> {
   const injectedSession =
     options.terminal ??
-    (options.promptIo ?
-      makeTerminalSessionFromPromptIo({
-        promptIo: options.promptIo,
-        env: options.env,
-      })
-    : undefined);
+    (options.promptIo
+      ? makeTerminalSessionFromPromptIo({
+          promptIo: options.promptIo,
+          env: options.env,
+        })
+      : undefined);
   return openTerminalSession({
     session: injectedSession,
     interactive: options.interactive,
@@ -347,8 +348,8 @@ export async function requestTerminalInput(
 
   if (!session) {
     if (!responseOptions.required) {
-      return responseOptions.defaultValue !== undefined ?
-          _scalarToString(responseOptions.defaultValue)
+      return responseOptions.defaultValue !== undefined
+        ? _scalarToString(responseOptions.defaultValue)
         : undefined;
     }
     const plainMessage = generateTerminalMessage(message, params, {

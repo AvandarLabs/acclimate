@@ -528,9 +528,9 @@ function _buildPaletteFromOverrides(
   const entries = SEMANTIC_THEME_ROLES.map((role) => {
     const override = overrides?.[role];
     const sequence =
-      override !== undefined ?
-        _styleInputToAnsiSequence(override)
-      : DEFAULT_DARK_THEME_PALETTE[role];
+      override !== undefined
+        ? _styleInputToAnsiSequence(override)
+        : DEFAULT_DARK_THEME_PALETTE[role];
     return [role, sequence] as const;
   });
 
@@ -660,9 +660,8 @@ export function makeThemeFromOptions(
     options.stream !== undefined ||
     options.isTTY !== undefined ||
     options.env !== undefined;
-  const computedStreamColor =
-    hasStreamTarget ?
-      isColorEnabledForStream({
+  const computedStreamColor = hasStreamTarget
+    ? isColorEnabledForStream({
         stream: options.stream,
         isTTY: options.isTTY,
         env: options.env,
@@ -672,17 +671,17 @@ export function makeThemeFromOptions(
   if (options.theme !== undefined && _isSemanticTheme(options.theme)) {
     const effectiveColor =
       options.color ?? computedStreamColor ?? options.theme.isColorEnabled;
-    return effectiveColor === options.theme.isColorEnabled ?
-        options.theme
+    return effectiveColor === options.theme.isColorEnabled
+      ? options.theme
       : options.theme.withColor(effectiveColor);
   }
 
   const effectiveColor =
     options.color ?? computedStreamColor ?? options.defaultColor;
   const mergedPalette =
-    options.fallbackPalette || options.theme ?
-      { ...options.fallbackPalette, ...options.theme }
-    : undefined;
+    options.fallbackPalette || options.theme
+      ? { ...options.fallbackPalette, ...options.theme }
+      : undefined;
 
   return createTheme({
     color: effectiveColor,
@@ -1080,11 +1079,9 @@ export function generateTerminalMessage(
     return _interpolateParams(message, params).replace(
       COLOR_TOKEN_REGEX,
       (match, tokenName: string) => {
-        return (
-            _lookupTokenCode({ tokenName, palette: theme.palette }) !==
-              undefined
-          ) ?
-            ""
+        return _lookupTokenCode({ tokenName, palette: theme.palette }) !==
+          undefined
+          ? ""
           : match;
       },
     );

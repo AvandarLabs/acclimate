@@ -170,8 +170,8 @@ export const MenuNavigation = {
       return numChoices - 1;
     }
     if (event.kind === "digit") {
-      return event.index >= 0 && event.index < numChoices ?
-          event.index
+      return event.index >= 0 && event.index < numChoices
+        ? event.index
         : selectedIndex;
     }
     return selectedIndex;

@@ -59,16 +59,17 @@ function _formatParamLine(options: {
 }): string {
   const { param, theme } = options;
   const description = param.description ?? "No description";
-  const requiredLabel =
-    param.required ? theme.error("required") : theme.muted("optional");
+  const requiredLabel = param.required
+    ? theme.error("required")
+    : theme.muted("optional");
   const choicesLabel =
-    param.choices && param.choices.length > 0 ?
-      theme.muted(`[choices: ${param.choices.join(" | ")}]`)
-    : undefined;
+    param.choices && param.choices.length > 0
+      ? theme.muted(`[choices: ${param.choices.join(" | ")}]`)
+      : undefined;
   const defaultLabel =
-    param.defaultValue !== undefined ?
-      theme.muted(`[default: ${JSON.stringify(param.defaultValue)}]`)
-    : undefined;
+    param.defaultValue !== undefined
+      ? theme.muted(`[default: ${JSON.stringify(param.defaultValue)}]`)
+      : undefined;
   const aliasList =
     param.aliases && param.aliases.length > 0 ? param.aliases.join(", ") : "";
   const baseName = param.variadic === true ? `${param.name}...` : param.name;
@@ -119,15 +120,15 @@ export function getBuiltinHelpOption(
     state.globalOptionArgs["--help"] !== undefined ||
     state.aliases["--help"] !== undefined;
 
-  return hasExplicitHelp ? undefined : (
-      {
+  return hasExplicitHelp
+    ? undefined
+    : {
         name: "--help",
         aliases: state.aliases["-h"] !== undefined ? [] : ["-h"],
         type: "boolean",
         required: false,
         description: "Show help for this command",
-      }
-    );
+      };
 }
 
 /**
@@ -142,11 +143,11 @@ export function formatHelpUsageSection(
     return [theme.heading("Usage"), `  ${state.usage}`];
   }
 
-  const commandToken =
-    !hasCommands ? undefined
-    : state.action === undefined && state.positionalArgs.length === 0 ?
-      "<command>"
-    : "[command]";
+  const commandToken = !hasCommands
+    ? undefined
+    : state.action === undefined && state.positionalArgs.length === 0
+      ? "<command>"
+      : "[command]";
   const positionalTokens = state.positionalArgs.map((param) => {
     const nameToken = param.variadic === true ? `${param.name}...` : param.name;
     return param.required ? `<${nameToken}>` : `[${nameToken}]`;
@@ -181,8 +182,8 @@ export function formatHelpExamplesSection(options: {
     const command = typeof example === "string" ? example : example.command;
     const description =
       typeof example === "string" ? undefined : example.description;
-    return description !== undefined ?
-        `  ${theme.value(command)} - ${theme.muted(description)}`
+    return description !== undefined
+      ? `  ${theme.value(command)} - ${theme.muted(description)}`
       : `  ${theme.value(command)}`;
   });
   return [theme.heading("Examples"), ...formattedExamples];

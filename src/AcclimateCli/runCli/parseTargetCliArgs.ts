@@ -62,23 +62,23 @@ function _parseVariadicValues(options: {
 }): string[] | number[] | boolean[] {
   const { cliName, rawValues, defaultValues, argConfig } = options;
   const parsedValues =
-    rawValues !== undefined ?
-      rawValues.map((rawValue) => {
-        return parseCliParamValue({
-          cliName,
-          inputValue: rawValue,
-          defaultValue: undefined,
-          paramConfig: argConfig,
+    rawValues !== undefined
+      ? rawValues.map((rawValue) => {
+          return parseCliParamValue({
+            cliName,
+            inputValue: rawValue,
+            defaultValue: undefined,
+            paramConfig: argConfig,
+          });
+        })
+      : (defaultValues ?? []).map((defaultItem) => {
+          return parseCliParamValue({
+            cliName,
+            inputValue: undefined,
+            defaultValue: defaultItem,
+            paramConfig: argConfig,
+          });
         });
-      })
-    : (defaultValues ?? []).map((defaultItem) => {
-        return parseCliParamValue({
-          cliName,
-          inputValue: undefined,
-          defaultValue: defaultItem,
-          paramConfig: argConfig,
-        });
-      });
 
   return _narrowParsedArray({ paramType: argConfig.type, parsedValues });
 }
@@ -113,8 +113,9 @@ async function _promptVariadicPositionalArg(options: {
       name: argConfig.name,
       description: argConfig.description,
       type: argConfig.type,
-      required:
-        isInteractive ? argConfig.required && !hasDefaults : argConfig.required,
+      required: isInteractive
+        ? argConfig.required && !hasDefaults
+        : argConfig.required,
       askIfEmpty: argConfig.askIfEmpty,
       defaultValue: undefined,
       choices: "choices" in argConfig ? argConfig.choices : undefined,
@@ -131,8 +132,8 @@ async function _promptVariadicPositionalArg(options: {
       argConfig,
     });
   }
-  return isInteractive && hasDefaults ?
-      _parseVariadicValues({
+  return isInteractive && hasDefaults
+    ? _parseVariadicValues({
         cliName,
         rawValues: undefined,
         defaultValues: argConfig.defaultValue,
@@ -194,15 +195,15 @@ async function _parseScalarPositionalArg(options: {
 }): Promise<CliParamScalarValue | undefined> {
   const { cliName, argConfig, getTerminalSession, theme } = options;
   const effectiveRawValue =
-    argConfig.askIfEmpty && options.rawValue === undefined ?
-      await promptCliParam({
-        cliName,
-        paramKind: "positional",
-        param: _toPromptableScalarParam(argConfig),
-        getTerminalSession,
-        theme,
-      })
-    : options.rawValue;
+    argConfig.askIfEmpty && options.rawValue === undefined
+      ? await promptCliParam({
+          cliName,
+          paramKind: "positional",
+          param: _toPromptableScalarParam(argConfig),
+          getTerminalSession,
+          theme,
+        })
+      : options.rawValue;
 
   if (argConfig.required && effectiveRawValue === undefined) {
     throw CliError.missingRequiredPositionalArg({
@@ -248,17 +249,17 @@ async function _parsePositionalArgs(options: {
   for (const [idx, argConfig] of positionalArgs.entries()) {
     const baseOptions = { cliName, argConfig, getTerminalSession, theme };
     const parsedValue =
-      argConfig.variadic === true ?
-        await _parseVariadicPositionalArg({
-          ...baseOptions,
-          argConfig,
-          rawValues: rawPositionalArgs.slice(idx),
-        })
-      : await _parseScalarPositionalArg({
-          ...baseOptions,
-          argConfig,
-          rawValue: rawPositionalArgs[idx],
-        });
+      argConfig.variadic === true
+        ? await _parseVariadicPositionalArg({
+            ...baseOptions,
+            argConfig,
+            rawValues: rawPositionalArgs.slice(idx),
+          })
+        : await _parseScalarPositionalArg({
+            ...baseOptions,
+            argConfig,
+            rawValue: rawPositionalArgs[idx],
+          });
     entries.push([argConfig.name, parsedValue]);
   }
   return Object.fromEntries(entries);
@@ -278,15 +279,15 @@ async function _parseOptionGroup(options: {
   for (const argConfig of optionDefs) {
     const rawValue = rawOptions[argConfig.name];
     const effectiveRawValue =
-      argConfig.askIfEmpty && rawValue === undefined ?
-        await promptCliParam({
-          cliName,
-          paramKind: "option",
-          param: _toPromptableScalarParam(argConfig),
-          getTerminalSession,
-          theme,
-        })
-      : rawValue;
+      argConfig.askIfEmpty && rawValue === undefined
+        ? await promptCliParam({
+            cliName,
+            paramKind: "option",
+            param: _toPromptableScalarParam(argConfig),
+            getTerminalSession,
+            theme,
+          })
+        : rawValue;
 
     if (argConfig.required && effectiveRawValue === undefined) {
       throw CliError.missingRequiredOption({

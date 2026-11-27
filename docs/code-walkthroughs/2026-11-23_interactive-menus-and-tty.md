@@ -67,29 +67,29 @@ src/
 
 <small>
 
-| Unit | What it is |
-| --- | --- |
-| `src/index.ts` | Public package entry point. Exports `Acclimate`, `executeCLI`, `generateHelpText`, `CLIError`, `requestChoiceMenu`, `requestTerminalInput`, `openTerminalSession`, `isColorEnabledForStream`, and their types. |
-| `src/Acclimate.ts` | Public facade wiring `createCLI`, `run`, `log` (to `stderr`), `writeData` and `writeJson` (to `stdout`), `requestInput`, and `requestChoice`. |
-| `src/CLIError.ts` | Structured CLI error adding `prompt_cancelled` and `interactive_input_unavailable` codes plus optional recovery `hint` parameters on missing-required factories. |
-| `generateTerminalMessage.ts` | Formats `$varName$` interpolation and `|<COLOR>|` tokens, now supporting `bold` and `{ color?: boolean }` plain-mode<sup>G6</sup> token stripping. |
-| `terminalSession.types.ts` | Shared contracts (`TerminalInputStream`, `TerminalOutputStream`, `TerminalSession`, `TerminalSessionOptions`) for injectable and real controlling-terminal IO. |
-| `isColorEnabledForStream.ts` | Pure check returning `true` only when a stream is a TTY, `NO_COLOR` is empty or unset, and `TERM` is not `"dumb"`. |
-| `openTerminalSession.ts` | Acquires a controlling terminal<sup>G3</sup> (`/dev/tty`) guarded by attached-TTY and `CI` checks, falling back to `stdin` and `stderr` only when both are TTYs. |
-| `createLineReader.ts` | Wraps a terminal session in a queued `node:readline` async iterator that preserves multi-line input and converts `SIGINT` or `EOF` to `CLIError.promptCancelled`. |
-| `MenuNavigation.ts` | Pure raw key-chunk parser and wrapping index reducer handling arrow keys, `j`/`k`/`g`/`G`, `Home`/`End`, digits `1`-`9`, `Enter`, `Ctrl-C`, `Ctrl-D`, and split escape sequences. |
-| `renderChoiceMenu.ts` | Pure menu renderer highlighting the active item in bold bright green with a textual `❯` cursor, or plain text when color is disabled. |
-| `runPlainChoiceMenu.ts` | Numbered plain-text fallback menu used when raw mode<sup>G7</sup> is unsupported (such as `TERM=dumb`), re-prompting on invalid answers. |
-| `requestChoiceMenu.ts` | Orchestrates raw-mode menu rendering, keypress handling, and guaranteed restoration of raw mode<sup>G7</sup>, cursor visibility, and listeners on confirm, cancel, or error. |
-| `requestTerminalInput.ts` | Interactive prompt helper delegating `choices` and raw-TTY `boolean` prompts to `requestChoiceMenu`, using `createLineReader` for text and numbers, and applying unattended fallback. |
-| `cliOptionLookupHelpers.ts` | Shared tokenizer helpers extracted from `tokenizeCLIInput` for flag lookup, built-in help detection, inline `=` splitting, and parent global option merging. |
-| `tokenizeCLIInput.ts` | Left-to-right token scanner extended to recognize built-in and explicitly declared `--no-prompt` flags and propagate `isNoPromptRequested` into sub-commands. |
-| `promptCLIParam.ts` | Prompts for a missing `askIfEmpty` CLI parameter over the active terminal session, or throws an actionable flag or argument error when unattended and required. |
-| `parseTargetCLIArgs.ts` | Extracted positional, variadic, option, and global-option allocation and validation pipeline called by `runCLI`. |
-| `runCLI.ts` | Command execution orchestrator managing the lazy single terminal session, bare multi-command selection menu, argument parsing, and session shutdown prior to running actions. |
-| `attachCLIErrorHelpContext.ts` | Enriches thrown `CLIError` instances with `commandPath`, preserves explicit unattended hints, and omits full usage dumps for `prompt_cancelled`. |
-| `formatCLIError.ts` | Renders `CLIError` messages, indented yellow recovery hints, and usage blocks with optional `{ color?: boolean }` plain-mode<sup>G6</sup> stripping. |
-| `executeCLI.ts` | Process-boundary runner forwarding terminal and environment options to `runCLI`, formatting errors to `stderr` with stream-aware color, and returning exit status `0`, `130`, or `1`. |
+| Unit                           | What it is                                                                                                                                                                                                     |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------- |
+| `src/index.ts`                 | Public package entry point. Exports `Acclimate`, `executeCLI`, `generateHelpText`, `CLIError`, `requestChoiceMenu`, `requestTerminalInput`, `openTerminalSession`, `isColorEnabledForStream`, and their types. |
+| `src/Acclimate.ts`             | Public facade wiring `createCLI`, `run`, `log` (to `stderr`), `writeData` and `writeJson` (to `stdout`), `requestInput`, and `requestChoice`.                                                                  |
+| `src/CLIError.ts`              | Structured CLI error adding `prompt_cancelled` and `interactive_input_unavailable` codes plus optional recovery `hint` parameters on missing-required factories.                                               |
+| `generateTerminalMessage.ts`   | Formats `$varName$` interpolation and `                                                                                                                                                                        | <COLOR> | `tokens, now supporting`bold`and`{ color?: boolean }` plain-mode<sup>G6</sup> token stripping. |
+| `terminalSession.types.ts`     | Shared contracts (`TerminalInputStream`, `TerminalOutputStream`, `TerminalSession`, `TerminalSessionOptions`) for injectable and real controlling-terminal IO.                                                 |
+| `isColorEnabledForStream.ts`   | Pure check returning `true` only when a stream is a TTY, `NO_COLOR` is empty or unset, and `TERM` is not `"dumb"`.                                                                                             |
+| `openTerminalSession.ts`       | Acquires a controlling terminal<sup>G3</sup> (`/dev/tty`) guarded by attached-TTY and `CI` checks, falling back to `stdin` and `stderr` only when both are TTYs.                                               |
+| `createLineReader.ts`          | Wraps a terminal session in a queued `node:readline` async iterator that preserves multi-line input and converts `SIGINT` or `EOF` to `CLIError.promptCancelled`.                                              |
+| `MenuNavigation.ts`            | Pure raw key-chunk parser and wrapping index reducer handling arrow keys, `j`/`k`/`g`/`G`, `Home`/`End`, digits `1`-`9`, `Enter`, `Ctrl-C`, `Ctrl-D`, and split escape sequences.                              |
+| `renderChoiceMenu.ts`          | Pure menu renderer highlighting the active item in bold bright green with a textual `❯` cursor, or plain text when color is disabled.                                                                          |
+| `runPlainChoiceMenu.ts`        | Numbered plain-text fallback menu used when raw mode<sup>G7</sup> is unsupported (such as `TERM=dumb`), re-prompting on invalid answers.                                                                       |
+| `requestChoiceMenu.ts`         | Orchestrates raw-mode menu rendering, keypress handling, and guaranteed restoration of raw mode<sup>G7</sup>, cursor visibility, and listeners on confirm, cancel, or error.                                   |
+| `requestTerminalInput.ts`      | Interactive prompt helper delegating `choices` and raw-TTY `boolean` prompts to `requestChoiceMenu`, using `createLineReader` for text and numbers, and applying unattended fallback.                          |
+| `cliOptionLookupHelpers.ts`    | Shared tokenizer helpers extracted from `tokenizeCLIInput` for flag lookup, built-in help detection, inline `=` splitting, and parent global option merging.                                                   |
+| `tokenizeCLIInput.ts`          | Left-to-right token scanner extended to recognize built-in and explicitly declared `--no-prompt` flags and propagate `isNoPromptRequested` into sub-commands.                                                  |
+| `promptCLIParam.ts`            | Prompts for a missing `askIfEmpty` CLI parameter over the active terminal session, or throws an actionable flag or argument error when unattended and required.                                                |
+| `parseTargetCLIArgs.ts`        | Extracted positional, variadic, option, and global-option allocation and validation pipeline called by `runCLI`.                                                                                               |
+| `runCLI.ts`                    | Command execution orchestrator managing the lazy single terminal session, bare multi-command selection menu, argument parsing, and session shutdown prior to running actions.                                  |
+| `attachCLIErrorHelpContext.ts` | Enriches thrown `CLIError` instances with `commandPath`, preserves explicit unattended hints, and omits full usage dumps for `prompt_cancelled`.                                                               |
+| `formatCLIError.ts`            | Renders `CLIError` messages, indented yellow recovery hints, and usage blocks with optional `{ color?: boolean }` plain-mode<sup>G6</sup> stripping.                                                           |
+| `executeCLI.ts`                | Process-boundary runner forwarding terminal and environment options to `runCLI`, formatting errors to `stderr` with stream-aware color, and returning exit status `0`, `130`, or `1`.                          |
 
 </small>
 
@@ -139,7 +139,7 @@ flowchart TD
   closeTty --> runAct
 ```
 
-> *Explicit CLI values never open the controlling terminal<sup>G3</sup>. Whenever a menu or prompt does open a terminal session, `runCLI` closes it and restores cooked mode<sup>G4</sup> in `finally` before invoking the command action, leaving piped `stdin` untouched and `stdout` exclusively for command output.*
+> _Explicit CLI values never open the controlling terminal<sup>G3</sup>. Whenever a menu or prompt does open a terminal session, `runCLI` closes it and restores cooked mode<sup>G4</sup> in `finally` before invoking the command action, leaving piped `stdin` untouched and `stdout` exclusively for command output._
 
 The four strands stack cleanly from low-level terminal IO up to the process boundary: §4 establishes controlling-terminal opening, queued line reading, and plain-mode<sup>G6</sup> color gating; §5 builds the pure choice-menu engine and migrates `requestTerminalInput` onto it; §6 integrates built-in `--no-prompt`, bare command selection, and unattended fallback into `tokenizeCLIInput` and `runCLI`; and §7 enforces `stdout`/`stderr` stream separation across `Acclimate`, `formatCLIError`, and `executeCLI`.
 
@@ -180,13 +180,13 @@ export async function openTerminalSession(
 
 The highlighted attached-TTY guard<sup>G1</sup> checks whether at least one standard stream is still connected to a terminal before attempting to open `/dev/tty`, and `_makeFallbackTtySession` falls back to `stdin` and `stderr` only when both are TTYs:
 
-| Invocation shape | `stdin.isTTY` | `stdout.isTTY` | `stderr.isTTY` | Session acquired |
-| --- | --- | --- | --- | --- |
-| Direct terminal (`tool`) | `true` | `true` | `true` | `/dev/tty` (fallback: `stdin` + `stderr`) |
-| Redirected data (`tool > out.json`) | `true` | `false` | `true` | `/dev/tty` (fallback: `stdin` + `stderr`) |
-| Piped input and output (`cat in \| tool \| jq`) | `false` | `false` | `true` | `/dev/tty` (never falls back to piped `stdin`) |
-| Fully piped agent or CI (`execFile`, `tool < /dev/null > out 2> err`) | `false` | `false` | `false` | `undefined` (unattended fail-fast) |
-| `CI=true` or `--no-prompt` or `interactive: false` | any | any | any | `undefined` (unattended fail-fast) |
+| Invocation shape                                                      | `stdin.isTTY` | `stdout.isTTY` | `stderr.isTTY` | Session acquired                               |
+| --------------------------------------------------------------------- | ------------- | -------------- | -------------- | ---------------------------------------------- |
+| Direct terminal (`tool`)                                              | `true`        | `true`         | `true`         | `/dev/tty` (fallback: `stdin` + `stderr`)      |
+| Redirected data (`tool > out.json`)                                   | `true`        | `false`        | `true`         | `/dev/tty` (fallback: `stdin` + `stderr`)      |
+| Piped input and output (`cat in \| tool \| jq`)                       | `false`       | `false`        | `true`         | `/dev/tty` (never falls back to piped `stdin`) |
+| Fully piped agent or CI (`execFile`, `tool < /dev/null > out 2> err`) | `false`       | `false`        | `false`        | `undefined` (unattended fail-fast)             |
+| `CI=true` or `--no-prompt` or `interactive: false`                    | any           | any            | any            | `undefined` (unattended fail-fast)             |
 
 When `_openPosixTtySession` opens `/dev/tty`, it opens two separate file descriptors asynchronously via promisified `node:fs` `open` (`O_RDONLY` for `tty.ReadStream` and `O_WRONLY` for `tty.WriteStream`) so destroying both streams on `close()` closes each descriptor once without double-closing a shared descriptor. If either open or stream constructor throws, `_closeDescriptorQuietly` releases any already-opened raw descriptor.
 
@@ -216,7 +216,7 @@ stateDiagram-v2
   cancelled --> [*] : close session and reject CLIError(prompt_cancelled)
 ```
 
-> *Every terminal exit path passes through one idempotent cleanup routine (`_restoreRawTerminalState`) that removes `data`/`end`/`close`/`error` listeners, restores the prior `isRaw` boolean, pauses the input stream, and emits `\x1b[?25h` to make the cursor visible again before resolving or rejecting.*
+> _Every terminal exit path passes through one idempotent cleanup routine (`_restoreRawTerminalState`) that removes `data`/`end`/`close`/`error` listeners, restores the prior `isRaw` boolean, pauses the input stream, and emits `\x1b[?25h` to make the cursor visible again before resolving or rejecting._
 
 ### 5.2 Split escape buffering and wrapping navigation in `MenuNavigation`
 
@@ -265,14 +265,14 @@ export const MenuNavigation = {
 
 When a chunk ends with an incomplete escape prefix (`\x1b`, `\x1b[`, `\x1bO`, `\x1b[1`, or `\x1b[4`), `parseKeyChunk` returns it in `pendingEscapeBuffer` so the next chunk completes the sequence without triggering spurious cancellations. Worked traversal for a three-item list `["stylish", "agent", "json"]` starting at index `0`:
 
-| Input chunk | Parsed events | Pending buffer | Resulting index / outcome |
-| --- | --- | --- | --- |
-| `"k"` | `[{ kind: "up" }]` | `""` | Wraps `0 -> 2` (`"json"`) |
-| `"j"` | `[{ kind: "down" }]` | `""` | Wraps `2 -> 0` (`"stylish"`) |
-| `"G"` | `[{ kind: "last" }]` | `""` | Jumps to `2` (`"json"`) |
-| `"g"` | `[{ kind: "first" }]` | `""` | Jumps to `0` (`"stylish"`) |
-| `"\x1b"` then `"[B"` | `[]`, then `[{ kind: "down" }]` | `"\x1b"`, then `""` | Moves `0 -> 1` (`"agent"`) |
-| `"\r"` | `[{ kind: "confirm" }]` | `""` | Resolves `"agent"` |
+| Input chunk          | Parsed events                   | Pending buffer      | Resulting index / outcome    |
+| -------------------- | ------------------------------- | ------------------- | ---------------------------- |
+| `"k"`                | `[{ kind: "up" }]`              | `""`                | Wraps `0 -> 2` (`"json"`)    |
+| `"j"`                | `[{ kind: "down" }]`            | `""`                | Wraps `2 -> 0` (`"stylish"`) |
+| `"G"`                | `[{ kind: "last" }]`            | `""`                | Jumps to `2` (`"json"`)      |
+| `"g"`                | `[{ kind: "first" }]`           | `""`                | Jumps to `0` (`"stylish"`)   |
+| `"\x1b"` then `"[B"` | `[]`, then `[{ kind: "down" }]` | `"\x1b"`, then `""` | Moves `0 -> 1` (`"agent"`)   |
+| `"\r"`               | `[{ kind: "confirm" }]`         | `""`                | Resolves `"agent"`           |
 
 ### 5.3 Visual layout, plain fallback, and `requestTerminalInput` delegation
 
@@ -491,15 +491,15 @@ This strand aligns `Acclimate`, `formatCLIError`, and `executeCLI` with the cont
 
 <small>
 
-| Term | Meaning |
-| --- | --- |
-| **G1** Attached-TTY guard | The check in `openTerminalSession` requiring at least one of `stdin`, `stdout`, or `stderr` to be a TTY (and `CI` unset) before opening `/dev/tty`, so fully redirected subprocesses fail fast instead of hanging. |
-| **G2** Bare sub-command menu | The interactive choice menu opened automatically when an actionless parent CLI with registered sub-commands is invoked with no positional arguments or local options in a terminal. |
-| **G3** Controlling terminal | The terminal device (`/dev/tty` on POSIX systems) attached to a user's shell session, used for interactive prompt input and menu rendering so piped `stdin` and `stdout` stay untouched. |
-| **G4** Cooked mode | Standard line-buffered terminal input mode where the OS echoes typed characters and translates `Ctrl-C` into `SIGINT`, restored before any command action runs or on menu exit. |
-| **G5** Lazy terminal controller | The per-run wrapper in `runCLI` that defers opening a terminal session until a menu or `askIfEmpty` prompt actually requires it, shares one session across prompts, and closes it in `finally`. |
-| **G6** Plain mode (plain-mode) | Non-colored, control-escape-free output activated automatically when a stream is not a TTY, `NO_COLOR` is nonempty, or `TERM` is `"dumb"`. |
-| **G7** Raw mode | Unbuffered terminal input mode (`setRawMode(true)`) delivering individual keystrokes and ANSI arrow escape sequences directly to `requestChoiceMenu`. |
-| **G8** Unattended mode | Non-interactive execution triggered when no TTY is attached, `CI` is enabled, `--no-prompt` is passed, or `interactive: false` is set, causing missing required values to fail fast and optional values to use defaults. |
+| Term                            | Meaning                                                                                                                                                                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **G1** Attached-TTY guard       | The check in `openTerminalSession` requiring at least one of `stdin`, `stdout`, or `stderr` to be a TTY (and `CI` unset) before opening `/dev/tty`, so fully redirected subprocesses fail fast instead of hanging.       |
+| **G2** Bare sub-command menu    | The interactive choice menu opened automatically when an actionless parent CLI with registered sub-commands is invoked with no positional arguments or local options in a terminal.                                      |
+| **G3** Controlling terminal     | The terminal device (`/dev/tty` on POSIX systems) attached to a user's shell session, used for interactive prompt input and menu rendering so piped `stdin` and `stdout` stay untouched.                                 |
+| **G4** Cooked mode              | Standard line-buffered terminal input mode where the OS echoes typed characters and translates `Ctrl-C` into `SIGINT`, restored before any command action runs or on menu exit.                                          |
+| **G5** Lazy terminal controller | The per-run wrapper in `runCLI` that defers opening a terminal session until a menu or `askIfEmpty` prompt actually requires it, shares one session across prompts, and closes it in `finally`.                          |
+| **G6** Plain mode (plain-mode)  | Non-colored, control-escape-free output activated automatically when a stream is not a TTY, `NO_COLOR` is nonempty, or `TERM` is `"dumb"`.                                                                               |
+| **G7** Raw mode                 | Unbuffered terminal input mode (`setRawMode(true)`) delivering individual keystrokes and ANSI arrow escape sequences directly to `requestChoiceMenu`.                                                                    |
+| **G8** Unattended mode          | Non-interactive execution triggered when no TTY is attached, `CI` is enabled, `--no-prompt` is passed, or `interactive: false` is set, causing missing required values to fail fast and optional values to use defaults. |
 
 </small>

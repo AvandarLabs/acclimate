@@ -77,8 +77,8 @@ function _buildRunThemeInput(
   ) {
     return themeInput;
   }
-  return defaultPaletteOverrides ?
-      { ...defaultPaletteOverrides, ...themeInput }
+  return defaultPaletteOverrides
+    ? { ...defaultPaletteOverrides, ...themeInput }
     : themeInput;
 }
 
@@ -110,11 +110,11 @@ export const Acclimate: AcclimateFacade = {
       theme: _buildRunThemeInput(options?.theme),
       onExitCode:
         options?.onExitCode ??
-        (shouldSetProcessExitCode ?
-          (exitCode) => {
-            process.exitCode = exitCode;
-          }
-        : undefined),
+        (shouldSetProcessExitCode
+          ? (exitCode) => {
+              process.exitCode = exitCode;
+            }
+          : undefined),
     });
   },
   execute: (cli: AnyCli, options = {}) => {
@@ -136,9 +136,9 @@ export const Acclimate: AcclimateFacade = {
   },
   createTheme: (options = {}) => {
     const mergedPalette =
-      defaultPaletteOverrides || options.palette ?
-        { ...defaultPaletteOverrides, ...options.palette }
-      : undefined;
+      defaultPaletteOverrides || options.palette
+        ? { ...defaultPaletteOverrides, ...options.palette }
+        : undefined;
     return createTheme({
       ...options,
       palette: mergedPalette,
@@ -176,9 +176,9 @@ export const Acclimate: AcclimateFacade = {
     const { stream, theme } = _getEffectiveStderrTheme(options);
     const errorLine = theme.error(_prefixWithEmoji("❌", message));
     const hintLine =
-      options.hint !== undefined ?
-        `\n  ${theme.warning(_prefixWithEmoji("⚠️", options.hint))}`
-      : "";
+      options.hint !== undefined
+        ? `\n  ${theme.warning(_prefixWithEmoji("⚠️", options.hint))}`
+        : "";
     stream.write(`${errorLine}${hintLine}\n`);
   },
   writeData: (data: string, options = {}) => {
@@ -208,9 +208,8 @@ export const Acclimate: AcclimateFacade = {
       openTty: store?.openTty,
       theme: store?.stderrTheme ?? defaultPaletteOverrides,
       ...options,
-      terminal:
-        options.promptIo ?
-          options.terminal
+      terminal: options.promptIo
+        ? options.terminal
         : (options.terminal ?? store?.terminal),
     });
   },
@@ -225,9 +224,8 @@ export const Acclimate: AcclimateFacade = {
       openTty: store?.openTty,
       theme: store?.stderrTheme ?? defaultPaletteOverrides,
       ...options,
-      terminal:
-        options.promptIo ?
-          options.terminal
+      terminal: options.promptIo
+        ? options.terminal
         : (options.terminal ?? store?.terminal),
     });
   },

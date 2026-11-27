@@ -24,10 +24,9 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier . --write",
-    "format:fix": "prettier . --write",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "format": "oxfmt --write .",
     "test": "vitest run",
     "test:watch": "vitest watch",
     "demo": "tsx examples/basic.ts",
@@ -37,7 +36,11 @@
     "changeset:version": "changeset version && npm install --package-lock-only",
     "release": "npm run build && changeset publish",
     "release:changesets": "tsx scripts/release/runEnsureChangesets.ts",
-    "release:github": "tsx scripts/release/runCreateGithubRelease.ts"
+    "release:github": "tsx scripts/release/runCreateGithubRelease.ts",
+    "skills": "tsx scripts/skills/SkillsCli.ts",
+    "skills:install": "tsx scripts/skills/SkillsCli.ts install",
+    "skills:update": "./scripts/skills/update-skills.sh",
+    "format:check": "oxfmt --check ."
   },
   "keywords": [
     "cli",
@@ -55,20 +58,13 @@
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",
     "@changesets/cli": "^3.0.3",
-    "@eslint/js": "^9.39.1",
-    "@ianvs/prettier-plugin-sort-imports": "^4.7.0",
     "@types/node": "^22.19.2",
-    "eslint": "^9.39.1",
-    "eslint-config-prettier": "^9.1.2",
-    "eslint-import-resolver-typescript": "^4.4.4",
-    "eslint-plugin-import-x": "^4.16.1",
-    "eslint-plugin-unused-imports": "^4.3.0",
-    "prettier": "^3.7.4",
+    "oxfmt": "^0.57.0",
+    "oxlint": "^1.72.0",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "type-fest": "^5.3.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.49.0",
     "vitest": "^2.1.9"
   },
   "publishConfig": {

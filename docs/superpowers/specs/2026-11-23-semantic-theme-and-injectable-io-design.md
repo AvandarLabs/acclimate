@@ -431,17 +431,14 @@ export type AcclimateRunOptions = {
   - Returns `Promise<number>`: `0` on success, `-h`/`--help`, or unattended
     actionless usage; `130` on `prompt_cancelled`; `1` on unknown flags,
     validation/parsing `CLIError`s, or uncaught action errors. Never rejects.
-  - **`process.exitCode` behavior:**
-    - If `options?.setProcessExitCode === true`, assigns `process.exitCode =
-exitCode` on non-zero exit.
-    - If `options?.setProcessExitCode === false` or `options?.onExitCode` is
-      provided, does not mutate `process.exitCode`.
-    - Otherwise, assigns `process.exitCode` only when no execution IO/args
-      boundary options (`args`, `stdin`, `stdout`, `stderr`, `env`,
-      `isStdoutTTY`, `isStderrTTY`, `terminal`, `promptIo`, `openTty`) were
-      injected. Standalone CLI entry points (`Acclimate.run(cli)` and
-      `Acclimate.run(cli, { theme })`) keep exact subprocess exit-code behavior,
-      while in-process tests (`await Acclimate.run(cli, { args, stdout, stderr
+  - **`process.exitCode` behavior:** - If `options?.setProcessExitCode === true`, assigns `process.exitCode =
+exitCode` on non-zero exit. - If `options?.setProcessExitCode === false` or `options?.onExitCode` is
+    provided, does not mutate `process.exitCode`. - Otherwise, assigns `process.exitCode` only when no execution IO/args
+    boundary options (`args`, `stdin`, `stdout`, `stderr`, `env`,
+    `isStdoutTTY`, `isStderrTTY`, `terminal`, `promptIo`, `openTty`) were
+    injected. Standalone CLI entry points (`Acclimate.run(cli)` and
+    `Acclimate.run(cli, { theme })`) keep exact subprocess exit-code behavior,
+    while in-process tests (`await Acclimate.run(cli, { args, stdout, stderr
 })`) never pollute `process.exitCode`.
 - **`Acclimate.execute(cli, options?): Promise<number>`**
   - Equivalent to `Acclimate.run(cli, { ...options, setProcessExitCode: false })`

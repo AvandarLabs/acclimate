@@ -111,9 +111,9 @@ export type CliState<
   commands: TCommands;
 
   /** The positional arguments of the CLI. */
-  positionalArgs: TPositionalParams extends EmptyObject ?
-    readonly CliPositionalParam[]
-  : ReadonlyArray<TPositionalParams[keyof TPositionalParams]>;
+  positionalArgs: TPositionalParams extends EmptyObject
+    ? readonly CliPositionalParam[]
+    : ReadonlyArray<TPositionalParams[keyof TPositionalParams]>;
 
   /** The named options of the CLI. */
   optionArgs: TOptionParams;
