@@ -81,6 +81,10 @@ exists, automatic generation is skipped and the release uses yours.
   therefore turned off. If the action ever works again, `release:github` sees
   the release exists and skips. `GITHUB_TOKEN` with `contents: write` is all it
   needs: there is no setting to enable Releases and no extra secret.
+- **The registry lags right after a publish.** `release:github` retries the
+  npm lookup for about a minute before concluding the version is not on npm.
+  Without that, the step ran seconds after `changeset publish`, saw a 404, and
+  skipped the tag and release.
 - **`ANTHROPIC_API_KEY` is only for the note text.** Publishing to npm and
   creating the release never use it. Without it the notes fall back to commit
   subjects.

@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { createGithubRelease } from "./createGithubRelease/createGithubRelease";
-import { isVersionPublished } from "./npmRegistry/npmRegistry";
+import { waitForVersionPublished } from "./npmRegistry/npmRegistry";
 import type { GitRunner } from "./releaseCommits/releaseCommits";
 
 const execFileAsync = promisify(execFile);
@@ -31,7 +31,7 @@ async function main(): Promise<void> {
       });
     },
     isPublished: (params) => {
-      return isVersionPublished({ ...params, fetchFn: fetch });
+      return waitForVersionPublished({ ...params, fetchFn: fetch });
     },
     runGit: _createRunner("git"),
     runGh: _createRunner("gh"),

@@ -21,3 +21,43 @@ export async function isVersionPublished(params: {
   }
   return true;
 }
+
+/**
+ * Like `isVersionPublished`, but retries on 404 so a version that was just
+ * published is not missed while the registry is still propagating it.
+ *
+ * @returns True once the version is listed, false if every attempt got a 404.
+ */
+export async function waitForVersionPublished(params: {
+  name: string;
+  version: string;
+  fetchFn: typeof fetch;
+  sleepFn?: (delayMs: number) => Promise<void>;
+  maxAttempts?: number;
+  delayMs?: number;
+}): Promise<boolean> {
+  const {
+    sleepFn = (delayMs) => {
+      return new Promise((resolve) => {
+        setTimeout(resolve, delayMs);
+      });
+    },
+    maxAttempts = 6,
+    delayMs = 10_000,
+    ...lookup
+  } = params;
+
+  for (
+    let attemptNumber = 1;
+    attemptNumber <= maxAttempts;
+    attemptNumber += 1
+  ) {
+    if (await isVersionPublished(lookup)) {
+      return true;
+    }
+    if (attemptNumber < maxAttempts) {
+      await sleepFn(delayMs);
+    }
+  }
+  return false;
+}

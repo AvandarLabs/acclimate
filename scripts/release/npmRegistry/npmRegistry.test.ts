@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { isVersionPublished } from "./npmRegistry";
+import { isVersionPublished, waitForVersionPublished } from "./npmRegistry";
 
 function _fetchReturning(status: number): typeof fetch {
   return vi.fn().mockResolvedValue(new Response("{}", { status }));
@@ -36,5 +36,46 @@ describe("isVersionPublished", () => {
         fetchFn: _fetchReturning(500),
       }),
     ).rejects.toThrow();
+  });
+});
+
+describe("waitForVersionPublished", () => {
+  it("is true once the registry stops returning 404", async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("{}", { status: 404 }))
+      .mockResolvedValueOnce(new Response("{}", { status: 404 }))
+      .mockResolvedValueOnce(new Response("{}", { status: 200 }));
+    const sleepFn = vi.fn().mockResolvedValue(undefined);
+
+    const result = await waitForVersionPublished({
+      name: "x",
+      version: "1.0.0",
+      fetchFn,
+      sleepFn,
+    });
+
+    expect(result).toBe(true);
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+    expect(sleepFn).toHaveBeenCalledTimes(2);
+  });
+
+  it("is false after every attempt returns 404", async () => {
+    const fetchFn = vi.fn().mockImplementation(async () => {
+      return new Response("{}", { status: 404 });
+    });
+    const sleepFn = vi.fn().mockResolvedValue(undefined);
+
+    const result = await waitForVersionPublished({
+      name: "x",
+      version: "1.0.0",
+      fetchFn,
+      sleepFn,
+      maxAttempts: 3,
+    });
+
+    expect(result).toBe(false);
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+    expect(sleepFn).toHaveBeenCalledTimes(2);
   });
 });
