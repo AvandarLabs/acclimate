@@ -1,5 +1,11 @@
 # @avandar/acclimate
 
+## 0.6.0
+
+### Minor Changes
+
+- [`bb1ce3e`](https://github.com/AvandarLabs/acclimate/commit/bb1ce3e2f2cffd128d0f98a062edb6bce4926d6d) Thanks [@jpsyx](https://github.com/jpsyx)! - **Breaking:** public exports now use `Cli` casing instead of `CLI`. Renamed `executeCLI` to `executeCli`, `CLIError` to `CliError`, `CLIErrorCode` to `CliErrorCode`, `AnyCLI` to `AnyCli`, `IAcclimateCLI` to `IAcclimateCli`, `ExecuteCLIOptions` to `ExecuteCliOptions`, `RunCLIOptions` to `RunCliOptions`, and every other `CLI`-prefixed type (`CLICommandName`, `CLIExample`, `CLIFullOptionName`, `CLIOptionAlias`, `CLIOptionParam`, `CLIParamDataType`, `CLIParamScalarValue`, `CLIPositionalParam`, `CLIScalarPositionalParam`, `CLIVariadicPositionalParam`) to the matching `Cli` name. Update imports and type references.
+
 ## 0.5.0
 
 ### Minor Changes
