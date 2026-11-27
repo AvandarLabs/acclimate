@@ -53,7 +53,7 @@
 Before writing code:
 
 - Determine which files in `docs/` are relevant to read.
-- Determine which available skills are relevant. Run `npx skills list` to see
+- Determine which available skills are relevant. Run `npm run skills` to see
   what this project has installed.
 - Determine which tests, if any, need to be written to test the requested
   functionality.
@@ -185,11 +185,10 @@ The rules for this project's language, runtime, and CLI design live in
 - **Never create or edit anything under `.agents/`, `.claude/skills/`,
   `.codex/`, `.cursor/skills/`, or `.opencode/`.** Those directories are
   generated and gitignored: `skills-lock.json` is the only skills file in git.
-- Common commands:
-  - `npx skills list`: list installed project skills.
-  - `npx skills experimental_install`: restore locked skills from
-    `skills-lock.json` on a fresh clone.
-  - `npx skills update`: update installed skills to their latest versions.
+- Common commands (the wrapper lives in `scripts/skills`):
+  - `npm run skills`: list installed project skills.
+  - `npm run skills:install`: restore locked skills on a fresh clone.
+  - `npm run skills:update`: update installed skills to their latest versions.
 - To add or remove a skill, use `npx skills add` or `npx skills remove` and
   commit the resulting `skills-lock.json` change in the same commit.
 - See [`docs/skills.md`](docs/skills.md) for full details on how project skills
