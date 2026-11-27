@@ -17,7 +17,7 @@
       "source": "AvandarLabs/avandar",
       "sourceType": "github",
       "skillPath": "agent-skills/public-skills/skills/diff-review/SKILL.md",
-      "computedHash": "d7df48ccdb4223c676cf435a0968408f60f09c5255e505ae77abb47c35b34e1f"
+      "computedHash": "941dd8398b107e3700f1c25e49efa8c5eddf6163d57d9d732ae01c0f29102f09"
     },
     "dispatching-parallel-agents": {
       "source": "obra/superpowers",
