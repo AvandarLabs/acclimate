@@ -1,6 +1,6 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
-import { generateTerminalMessage } from "@/generateTerminalMessage";
+import { generateTerminalMessage } from "@/generateTerminalMessage/generateTerminalMessage";
 import { createTheme } from "@/theme/createTheme/createTheme";
 import { requestTerminalInput } from "./requestTerminalInput";
 import type { TerminalSession } from "@/terminalSession/terminalSession.types";

@@ -42,7 +42,7 @@ describe("generateTerminalMessage", () => {
     ).toBe("Count: 0 Active: false Empty: null");
   });
 
-  it("handles mixed primitive params including undefined", () => {
+  it("renders numbers, booleans and null as text and undefined as an empty string", () => {
     expect(
       generateTerminalMessage(
         "Retries: $retries$ Enabled: $enabled$ Label: $label$ Note: $note$",

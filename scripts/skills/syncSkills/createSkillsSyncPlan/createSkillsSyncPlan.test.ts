@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { IMPECCABLE_SKILL_NAME } from "../../constants";
+import { IMPECCABLE_SKILL_NAME } from "../../skills.constants";
 import { createSkillsSyncPlan } from "./createSkillsSyncPlan";
 import type { SkillSourceGroup } from "../../skills.types";
 

@@ -109,7 +109,7 @@ function _matchEscapeAt(
  * Called by `requestChoiceMenu` to keep raw terminal parsing decoupled from IO.
  */
 export const MenuNavigation = {
-  /** Parse a raw chunk into menu events plus any trailing incomplete escape bytes. */
+  /** Parse a raw chunk into menu events plus any incomplete escape bytes. */
   parseKeyChunk: (
     chunk: string,
     pendingEscapeBuffer: string = "",
@@ -147,7 +147,7 @@ export const MenuNavigation = {
     return { events, pendingEscapeBuffer: "" };
   },
 
-  /** Compute the next highlighted choice index with wrapping and bounds checks. */
+  /** Compute the next highlighted choice index, wrapping at the ends. */
   stepIndex: (options: {
     selectedIndex: number;
     numChoices: number;

@@ -1,6 +1,6 @@
 import { Acclimate } from "../src/Acclimate/Acclimate";
 
-const DevDBCli = Acclimate.createCli("db").description("Database tools");
+const DevDbCli = Acclimate.createCli("db").description("Database tools");
 const DevWebCli = Acclimate.createCli("web").description("Web tools");
 
 const DevCli = Acclimate.createCli("dev")
@@ -82,7 +82,7 @@ const DevCli = Acclimate.createCli("dev")
       message: "Which profile should I use?",
     },
   })
-  .addCommand("db", DevDBCli)
+  .addCommand("db", DevDbCli)
   .addCommand("web", DevWebCli)
   .action(
     ({
@@ -121,9 +121,9 @@ const DevCli = Acclimate.createCli("dev")
         return;
       }
 
-      for (let i = 0; i < cycles; i += 1) {
+      Array.from({ length: cycles }).forEach(() => {
         Acclimate.log("|gray|Sleeping...|reset|");
-      }
+      });
 
       Acclimate.log("|green|Done.|reset|");
     },

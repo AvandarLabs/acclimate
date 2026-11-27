@@ -4,8 +4,8 @@ import {
   AGENT_SKILLS_DIR_PATH,
   IMPECCABLE_SKILL_NAME,
   IMPECCABLE_SKILL_SOURCE,
-} from "../constants";
-import { runCommand } from "../runCommand/runCommand";
+} from "../skills.constants";
+import { runCommand } from "../runCommand";
 import { createSkillsListCommand } from "../skillCommands/skillCommands";
 import type { CommandRunner, InstalledSkill } from "../skills.types";
 
@@ -29,7 +29,8 @@ function _isSkillsListRow(row: unknown): row is SkillsListRow {
   return (
     typeof row === "object" &&
     row !== null &&
-    typeof (row as { name?: unknown }).name === "string"
+    "name" in row &&
+    typeof row.name === "string"
   );
 }
 
@@ -44,9 +45,9 @@ function _extractJsonRows(commandOutput: string): unknown[] {
   if (arrayStart === -1 || arrayEnd < arrayStart) {
     return [];
   }
-  const parsed = JSON.parse(
+  const parsed: unknown = JSON.parse(
     commandOutput.slice(arrayStart, arrayEnd + 1),
-  ) as unknown;
+  );
   return Array.isArray(parsed) ? parsed : [];
 }
 

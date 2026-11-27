@@ -3,7 +3,7 @@ import {
   IMPECCABLE_SKILL_NAME,
   SKILL_AGENT_NAMES,
   UPDATE_SKILLS_SCRIPT_PATH,
-} from "../constants";
+} from "../skills.constants";
 import type { CommandSpec, SkillSourceGroup } from "../skills.types";
 
 /**

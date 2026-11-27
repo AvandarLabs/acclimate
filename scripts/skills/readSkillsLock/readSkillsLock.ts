@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { SKILLS_LOCK_FILE_NAME } from "../constants";
+import { SKILLS_LOCK_FILE_NAME } from "../skills.constants";
 import type { SkillSourceGroup } from "../skills.types";
 
 type SkillsLockEntry = {
@@ -22,9 +22,7 @@ function _parseLockDocument(lockJson: string): SkillsLockDocument {
 }
 
 function _isFileNotFoundError(error: unknown): boolean {
-  return (
-    error instanceof Error && (error as NodeJS.ErrnoException).code === "ENOENT"
-  );
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
 }
 
 /**

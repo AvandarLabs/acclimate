@@ -1,4 +1,4 @@
-import { NPM_REGISTRY_URL } from "./releaseConfig";
+import { NPM_REGISTRY_URL } from "../releaseConfig";
 
 /**
  * True when `name@version` is on the npm registry, false on a 404. Any other

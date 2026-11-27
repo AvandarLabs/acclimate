@@ -1,9 +1,9 @@
-import { createCli } from "@/AcclimateCli";
+import { createCli } from "@/AcclimateCli/createCli/createCli";
 import { executeCli } from "@/AcclimateCli/executeCli/executeCli";
 import { ExecutionIoContext } from "@/AcclimateCli/ExecutionIoContext/ExecutionIoContext";
-import { generateTerminalMessage } from "@/generateTerminalMessage";
+import { generateTerminalMessage } from "@/generateTerminalMessage/generateTerminalMessage";
 import { requestChoiceMenu } from "@/requestChoiceMenu/requestChoiceMenu";
-import { requestTerminalInput } from "@/requestTerminalInput";
+import { requestTerminalInput } from "@/requestTerminalInput/requestTerminalInput";
 import { createTheme } from "@/theme/createTheme/createTheme";
 import { makeThemeFromOptions } from "@/theme/makeThemeFromOptions/makeThemeFromOptions";
 import type {

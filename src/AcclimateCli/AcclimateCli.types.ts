@@ -69,6 +69,8 @@ export type FullCliArgValues<
 }>;
 
 /** Type-erased `IAcclimateCli` accepted by `Acclimate.run` and sub-commands. */
+// `any` is required: a CLI is invariant in its param records, so no narrower
+// type accepts every concrete CLI.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyCli = IAcclimateCli<any, any, any, any>;
 
@@ -203,11 +205,7 @@ export type IAcclimateCli<
    * If the first positional argument before `--` matches a command, Acclimate
    * parses all subsequent arguments with that command's CLI.
    */
-  addCommand: <
-    C extends CliCommandName,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    CommandCli extends IAcclimateCli<any, any, any, any>,
-  >(
+  addCommand: <C extends CliCommandName, CommandCli extends AnyCli>(
     commandName: C,
     cli: CommandCli,
   ) => IAcclimateCli<

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generateTerminalMessage } from "@/generateTerminalMessage/generateTerminalMessage";
 import { createTheme } from "@/theme/createTheme/createTheme";
-import { createCli } from "../createCli";
+import { createCli } from "../createCli/createCli";
 import { generateHelpText } from "./generateHelpText";
 
 describe("generateHelpText", () => {

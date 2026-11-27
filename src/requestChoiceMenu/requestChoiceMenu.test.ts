@@ -66,7 +66,8 @@ describe("requestChoiceMenu", () => {
       terminal: mock.session,
     });
 
-    // k wraps from 0 -> 2, j wraps from 2 -> 0, G jumps to 2, g jumps to 0, Down moves to 1, Enter confirms "agent".
+    // k wraps from 0 -> 2, j wraps from 2 -> 0, G jumps to 2, g jumps to 0,
+    // Down moves to 1, Enter confirms "agent".
     mock.input.write("kjGg\x1b[B\r");
 
     const selected = await selectionPromise;

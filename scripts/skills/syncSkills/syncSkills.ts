@@ -4,12 +4,15 @@ import {
   printInfo,
   printSuccess,
   printWarning,
-} from "../cliOutput/cliOutput";
-import { IMPECCABLE_SKILL_NAME, SKIP_SKILLS_ENV_VAR_NAMES } from "../constants";
-import { readInstalledSkillNamesFromDisk } from "../installedSkills/readInstalledSkills";
-import { runCommand } from "../runCommand/runCommand";
+} from "../cliOutput";
+import {
+  IMPECCABLE_SKILL_NAME,
+  SKIP_SKILLS_ENV_VAR_NAMES,
+} from "../skills.constants";
+import { readInstalledSkillNamesFromDisk } from "../readInstalledSkills/readInstalledSkills";
+import { runCommand } from "../runCommand";
 import { createSkillsUpdateCommand } from "../skillCommands/skillCommands";
-import { readSkillSourceGroups } from "../skillsLock/readSkillsLock";
+import { readSkillSourceGroups } from "../readSkillsLock/readSkillsLock";
 import { createSkillsSyncPlan } from "./createSkillsSyncPlan/createSkillsSyncPlan";
 import type { CommandRunner, CommandSpec } from "../skills.types";
 
@@ -53,27 +56,25 @@ function _findSkipReason(
 /**
  * Runs the planned commands one at a time, collecting the labels that failed.
  *
- * The reduce chains the promises so the commands stay sequential: both
- * managers write `.agents/skills` and the same per-frontend link directories,
- * so parallel installs would race each other. A failure is recorded and the
- * run continues, because one unreachable repository should not cost the user
- * every other skill.
+ * Both managers write the same skill directories, so the commands stay
+ * sequential. A failure is recorded and the run continues.
  */
-function _runCommands(
+async function _runCommands(
   commands: readonly CommandSpec[],
   options: Readonly<{ runner: CommandRunner; quiet: boolean }>,
 ): Promise<string[]> {
   const { runner, quiet } = options;
 
-  return commands.reduce(async (previousFailedLabels, command) => {
-    const failedLabels = await previousFailedLabels;
+  const failedLabels: string[] = [];
+  // Commands must run one at a time and in order, so each is awaited in turn.
+  for (const command of commands) {
     if (!quiet) {
       printInfo(`- ${command.label}`);
     }
 
     const result = await runner(command, { streamOutput: !quiet });
     if (result.exitCode === 0) {
-      return failedLabels;
+      continue;
     }
 
     printError(`Failed: ${command.label}`);
@@ -83,8 +84,9 @@ function _runCommands(
         detail.split("\n").slice(-FAILURE_DETAIL_LINE_COUNT).join("\n"),
       );
     }
-    return [...failedLabels, command.label];
-  }, Promise.resolve<string[]>([]));
+    failedLabels.push(command.label);
+  }
+  return failedLabels;
 }
 
 /**
@@ -134,12 +136,9 @@ function _reportOutcome(
 /**
  * Installs the locked skills that are not on disk, and leaves the rest alone.
  *
- * This is what `npm install` runs, and it deliberately behaves the way
- * `npm install` does for packages: it makes the working tree match the lock
- * without upgrading anything already installed. A complete project makes no
- * network calls at all. Both managers are driven here: `npx skills` for the
- * lock, and the CLI of a skill that installs itself when this project has one.
- * Nothing is symlinked by hand, because each tool owns the layout it expects.
+ * Like `npm install` for packages, it makes the working tree match the lock
+ * without upgrading anything already installed, and a complete project makes
+ * no network calls.
  *
  * @param options.quiet Postinstall mode: minimal output, never fails.
  * @param options.runner Command runner, overridden in tests.
@@ -187,13 +186,6 @@ export async function installSkills(
 
 /**
  * Updates every skill to the latest version its source offers.
- *
- * All of the work is `scripts/skills/update-skills.sh`, which drives both
- * managers itself. That script is the single implementation of "update every
- * skill" so a generated project with no TypeScript tooling updates exactly the
- * way this one does; nothing here decides what an update means. The script
- * finds the project root itself, which is why `projectRootPath` does not reach
- * it.
  *
  * Unlike {@link installSkills} this always reaches the network: it is the
  * deliberate "go get the newest" step, so it runs even when nothing is

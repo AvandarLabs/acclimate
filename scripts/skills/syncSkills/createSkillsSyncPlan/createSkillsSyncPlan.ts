@@ -1,7 +1,7 @@
 import {
   IMPECCABLE_SKILL_NAME,
   SELF_INSTALLING_SKILL_NAMES,
-} from "../../constants";
+} from "../../skills.constants";
 import {
   createImpeccableInstallCommand,
   createSkillsAddCommand,

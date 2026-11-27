@@ -1,5 +1,5 @@
-import { extractChangelogSection } from "./changelogSection";
-import type { GitRunner } from "./releaseCommits";
+import { extractChangelogSection } from "../extractChangelogSection/extractChangelogSection";
+import type { GitRunner } from "../releaseCommits/releaseCommits";
 
 /** Everything `createGithubRelease` touches, injected for testing. */
 export type CreateGithubReleaseDeps = {

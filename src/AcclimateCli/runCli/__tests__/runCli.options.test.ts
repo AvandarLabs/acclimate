@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createCli } from "@/AcclimateCli/createCli";
+import { createCli } from "@/AcclimateCli/createCli/createCli";
 import { runCli } from "@/AcclimateCli/runCli/runCli";
 import { generateTerminalMessage } from "@/generateTerminalMessage/generateTerminalMessage";
 import {

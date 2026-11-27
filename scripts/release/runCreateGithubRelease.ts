@@ -1,9 +1,9 @@
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
-import { createGithubRelease } from "./createGithubRelease";
-import { isVersionPublished } from "./npmRegistry";
-import type { GitRunner } from "./releaseCommits";
+import { createGithubRelease } from "./createGithubRelease/createGithubRelease";
+import { isVersionPublished } from "./npmRegistry/npmRegistry";
+import type { GitRunner } from "./releaseCommits/releaseCommits";
 
 const execFileAsync = promisify(execFile);
 

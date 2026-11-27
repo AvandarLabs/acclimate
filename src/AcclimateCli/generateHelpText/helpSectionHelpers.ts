@@ -17,7 +17,10 @@ export type HelpSectionTitle =
   | "Examples"
   | "Commands";
 
-/** Normalized parameter shape rendered in help option and positional sections. */
+/**
+ * Normalized parameter shape rendered in help option and positional
+ * sections.
+ */
 export type HelpParam = {
   name: string;
   type: "string" | "number" | "boolean";
@@ -167,7 +170,8 @@ export function formatHelpUsageSection(
 }
 
 /**
- * Formats the `Examples` section with themed commands and optional descriptions.
+ * Formats the `Examples` section with themed commands and optional
+ * descriptions.
  * Called by `generateHelpText`.
  */
 export function formatHelpExamplesSection(options: {

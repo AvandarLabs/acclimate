@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import type { CommandResult, CommandSpec } from "../skills.types";
+import type { CommandResult, CommandSpec } from "./skills.types";
 
 /**
  * Runs a command and resolves with its result.

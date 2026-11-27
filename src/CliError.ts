@@ -210,7 +210,7 @@ export class CliError extends Error {
     });
   }
 
-  /** Build an error when an interactive prompt is cancelled via Ctrl-C or EOF. */
+  /** Build an error for an interactive prompt cancelled via Ctrl-C or EOF. */
   static promptCancelled(options: {
     cliName: string;
     message?: string;

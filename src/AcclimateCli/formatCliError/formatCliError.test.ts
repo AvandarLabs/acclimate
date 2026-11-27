@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CliError } from "@/CliError";
-import { generateTerminalMessage } from "@/generateTerminalMessage";
+import { generateTerminalMessage } from "@/generateTerminalMessage/generateTerminalMessage";
 import { createTheme } from "@/theme/createTheme/createTheme";
 import { formatCliError } from "./formatCliError";
 

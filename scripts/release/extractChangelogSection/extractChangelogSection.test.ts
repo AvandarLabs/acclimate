@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractChangelogSection } from "./changelogSection";
+import { extractChangelogSection } from "./extractChangelogSection";
 
 const CHANGELOG = `# @avandar/acclimate
 

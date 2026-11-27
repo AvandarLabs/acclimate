@@ -3,9 +3,9 @@ import {
   buildFallbackNotes,
   parseReleaseNotesResponse,
   requestReleaseNotes,
-  resolveNoteBumps,
+  makeReleaseNotesFromRawNotes,
 } from "./releaseNotes";
-import type { ReleaseCandidate } from "./releaseCommits";
+import type { ReleaseCandidate } from "../releaseCommits/releaseCommits";
 
 function _candidate(overrides: Partial<ReleaseCandidate>): ReleaseCandidate {
   return {
@@ -20,7 +20,7 @@ function _candidate(overrides: Partial<ReleaseCandidate>): ReleaseCandidate {
 }
 
 describe("parseReleaseNotesResponse", () => {
-  it("parses JSON, including inside a code fence", () => {
+  it("returns the notes array when the JSON reply is wrapped in a code fence", () => {
     const body =
       '```json\n{"notes":[{"text":"Adds x.","commits":["aaaaaaa"],"bump":"minor"}]}\n```';
     expect(parseReleaseNotesResponse(body)).toEqual([
@@ -38,9 +38,9 @@ describe("parseReleaseNotesResponse", () => {
   });
 });
 
-describe("resolveNoteBumps", () => {
+describe("makeReleaseNotesFromRawNotes", () => {
   it("uses the deterministic bump when every commit is classified", () => {
-    const notes = resolveNoteBumps({
+    const notes = makeReleaseNotesFromRawNotes({
       rawNotes: [{ text: "t", commits: ["aaaaaaa"], bump: "patch" }],
       candidates: [_candidate({ knownBump: "minor" })],
     });
@@ -50,7 +50,7 @@ describe("resolveNoteBumps", () => {
   });
 
   it("uses the model bump, capped at minor, for unclassified commits", () => {
-    const notes = resolveNoteBumps({
+    const notes = makeReleaseNotesFromRawNotes({
       rawNotes: [{ text: "t", commits: ["bbbbbbb"], bump: "major" }],
       candidates: [_candidate({ shortSha: "bbbbbbb", knownBump: undefined })],
     });
@@ -58,7 +58,7 @@ describe("resolveNoteBumps", () => {
   });
 
   it("drops notes that cite no known commit or resolve to none", () => {
-    const notes = resolveNoteBumps({
+    const notes = makeReleaseNotesFromRawNotes({
       rawNotes: [
         { text: "ghost", commits: ["zzzzzzz"], bump: "minor" },
         { text: "skip", commits: ["bbbbbbb"], bump: "none" },

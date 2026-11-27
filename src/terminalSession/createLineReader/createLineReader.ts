@@ -11,7 +11,7 @@ import type {
  * cancellation support.
  */
 export type TerminalLineReader = {
-  /** Write `promptText` to the session output and read the next trimmed line. */
+  /** Write `promptText` to the session output, then read a trimmed line. */
   readLine: (promptText: string) => Promise<string>;
 
   /** Close the underlying readline interface and remove signal listeners. */

@@ -1,4 +1,4 @@
-import type { CommitClassification } from "./commitClassification";
+import type { CommitClassification } from "../commitClassification/commitClassification";
 
 /** How far a change moves the package version. */
 export type BumpLevel = "none" | "patch" | "minor" | "major";

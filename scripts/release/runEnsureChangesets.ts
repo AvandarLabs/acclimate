@@ -1,8 +1,8 @@
 import { execFile } from "node:child_process";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
-import { ensureChangesets } from "./ensureChangesets";
-import type { GitRunner } from "./releaseCommits";
+import { ensureChangesets } from "./ensureChangesets/ensureChangesets";
+import type { GitRunner } from "./releaseCommits/releaseCommits";
 
 const execFileAsync = promisify(execFile);
 const CHANGESET_DIRECTORY = ".changeset";

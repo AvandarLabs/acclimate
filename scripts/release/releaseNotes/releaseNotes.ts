@@ -1,13 +1,13 @@
-import { maxBumpLevel } from "./bumpLevel";
-import { mergeSubjectToBranchName } from "./commitClassification";
+import { maxBumpLevel } from "../bumpLevel/bumpLevel";
+import { mergeSubjectToBranchName } from "../commitClassification/commitClassification";
 import {
   ANTHROPIC_API_VERSION,
   ANTHROPIC_MESSAGES_URL,
   RELEASE_NOTES_MAX_TOKENS,
   RELEASE_NOTES_MODEL,
-} from "./releaseConfig";
-import type { BumpLevel } from "./bumpLevel";
-import type { ReleaseCandidate } from "./releaseCommits";
+} from "../releaseConfig";
+import type { BumpLevel } from "../bumpLevel/bumpLevel";
+import type { ReleaseCandidate } from "../releaseCommits/releaseCommits";
 
 /** A note as the model returns it, before bumps are resolved. */
 export type RawReleaseNote = {
@@ -58,7 +58,10 @@ function _isBumpLevel(value: unknown): value is BumpLevel {
 }
 
 function _toRawNote(value: unknown): RawReleaseNote {
-  const note = value as Record<string, unknown> | undefined;
+  const note: Record<string, unknown> | undefined =
+    typeof value === "object" && value !== null
+      ? Object.fromEntries(Object.entries(value))
+      : undefined;
   const commits = note?.commits;
   if (
     typeof note?.text !== "string" ||
@@ -156,7 +159,7 @@ export function buildFallbackNotes(
  * breaking marker can ever cause a major release. Notes that cite no known
  * commit, or end at `none`, are dropped.
  */
-export function resolveNoteBumps(params: {
+export function makeReleaseNotesFromRawNotes(params: {
   rawNotes: readonly RawReleaseNote[];
   candidates: readonly ReleaseCandidate[];
 }): ReleaseNote[] {

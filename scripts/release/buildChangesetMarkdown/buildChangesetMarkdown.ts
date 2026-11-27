@@ -1,4 +1,4 @@
-import type { BumpLevel } from "./bumpLevel";
+import type { BumpLevel } from "../bumpLevel/bumpLevel";
 
 /** Renders the contents of a `.changeset/*.md` file for one release note. */
 export function buildChangesetMarkdown(params: {

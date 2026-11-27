@@ -1,6 +1,6 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
-import { createCli } from "@/AcclimateCli/createCli";
+import { createCli } from "@/AcclimateCli/createCli/createCli";
 import { createTheme } from "@/theme/createTheme/createTheme";
 import { executeCli } from "../executeCli";
 import type { TerminalSession } from "@/terminalSession/terminalSession.types";

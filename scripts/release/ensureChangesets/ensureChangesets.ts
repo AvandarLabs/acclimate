@@ -1,18 +1,21 @@
-import { buildChangesetMarkdown } from "./buildChangesetMarkdown";
-import { isVersionPublished } from "./npmRegistry";
+import { buildChangesetMarkdown } from "../buildChangesetMarkdown/buildChangesetMarkdown";
+import { isVersionPublished } from "../npmRegistry/npmRegistry";
 import {
   collectReleaseCommits,
   findReleaseAnchor,
   selectReleaseCandidates,
-} from "./releaseCommits";
-import { DIFF_CHAR_BUDGET } from "./releaseConfig";
+} from "../releaseCommits/releaseCommits";
+import { DIFF_CHAR_BUDGET } from "../releaseConfig";
 import {
   buildFallbackNotes,
   requestReleaseNotes,
-  resolveNoteBumps,
-} from "./releaseNotes";
-import type { GitRunner, ReleaseCandidate } from "./releaseCommits";
-import type { RawReleaseNote } from "./releaseNotes";
+  makeReleaseNotesFromRawNotes,
+} from "../releaseNotes/releaseNotes";
+import type {
+  GitRunner,
+  ReleaseCandidate,
+} from "../releaseCommits/releaseCommits";
+import type { RawReleaseNote } from "../releaseNotes/releaseNotes";
 
 /** Everything `ensureChangesets` touches, injected so it can be tested. */
 export type EnsureChangesetsDeps = {
@@ -60,7 +63,7 @@ async function _writeChangesets(params: {
 }): Promise<string[]> {
   const { deps, packageName, candidates } = params;
   const rawNotes = await _requestNotesOrFallBack(deps, candidates);
-  const notes = resolveNoteBumps({ rawNotes, candidates });
+  const notes = makeReleaseNotesFromRawNotes({ rawNotes, candidates });
   const fileNames: string[] = [];
   for (const [index, note] of notes.entries()) {
     const fileName = `auto-${index + 1}-${note.commitShas[0] ?? "note"}.md`;

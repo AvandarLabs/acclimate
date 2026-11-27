@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCli } from "@/AcclimateCli/createCli";
+import { createCli } from "@/AcclimateCli/createCli/createCli";
 import { generateHelpText } from "@/AcclimateCli/generateHelpText/generateHelpText";
 import { CliError } from "@/CliError";
 import { tokenizeCliInput } from "../tokenizeCliInput";

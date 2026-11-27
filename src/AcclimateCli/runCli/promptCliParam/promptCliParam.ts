@@ -1,5 +1,5 @@
 import { CliError } from "@/CliError";
-import { requestTerminalInput } from "@/requestTerminalInput";
+import { requestTerminalInput } from "@/requestTerminalInput/requestTerminalInput";
 import type { CliParamScalarValue } from "@/AcclimateCli/AcclimateCli.types";
 import type { TerminalSession } from "@/terminalSession/terminalSession.types";
 import type { SemanticTheme } from "@/theme/theme.types";

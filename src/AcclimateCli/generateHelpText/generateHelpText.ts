@@ -61,7 +61,7 @@ function _buildSubCommandLines(options: {
 }): string[] {
   const { sortedCommands, theme } = options;
   return sortedCommands.flatMap(([, commandCli]) => {
-    const subCommandState = commandCli.state as RuntimeHelpCliState;
+    const subCommandState = commandCli.state;
     return [
       "",
       ..._generateHelpTextHelper({

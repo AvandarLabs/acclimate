@@ -2,7 +2,7 @@ import {
   IMPECCABLE_SKILL_NAME,
   IMPECCABLE_SKILL_SOURCE,
   SELF_INSTALLING_SKILL_NAMES,
-} from "../../constants";
+} from "../../skills.constants";
 import type {
   InstalledSkill,
   SkillListingRow,

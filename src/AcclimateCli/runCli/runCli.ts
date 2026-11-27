@@ -182,7 +182,7 @@ async function _selectBareSubcommand(options: {
   theme: SemanticTheme;
 }): Promise<TargetExecutionContext> {
   const { context, getTerminalSession, theme } = options;
-  const targetState = context.targetCli.state as RuntimeTargetCliState;
+  const targetState = context.targetCli.state;
   const commandChoices = _getSortedCommandChoices(targetState.commands);
   const canOpenMenu =
     targetState.action === undefined &&
@@ -236,7 +236,7 @@ async function _collectTargetExecution(options: {
       getTerminalSession: terminalController.getSession,
       theme: stderrTheme,
     });
-    const targetState = finalContext.targetCli.state as RuntimeTargetCliState;
+    const targetState = finalContext.targetCli.state;
     const parsedArgs = await parseTargetCliArgs({
       cliName: finalContext.commandPath.join(" "),
       positionalArgs: targetState.positionalArgs,
@@ -302,6 +302,7 @@ export async function runCli(options: Readonly<RunCliOptions>): Promise<void> {
       stderrTheme: store.stderrTheme,
     });
 
+    // The type-erased action takes untyped args, so narrow it here.
     const matchedState = finalContext.targetCli.state as RuntimeTargetCliState;
     if (matchedState.action) {
       await matchedState.action(parsedArgs);

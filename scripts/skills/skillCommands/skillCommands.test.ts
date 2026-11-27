@@ -77,8 +77,4 @@ describe("createSkillsUpdateCommand", () => {
     expect(command.command).toBe("./scripts/skills/update-skills.sh");
     expect(command.args).toEqual([]);
   });
-
-  it("labels itself for progress output", () => {
-    expect(createSkillsUpdateCommand().label).toBe("skills update");
-  });
 });

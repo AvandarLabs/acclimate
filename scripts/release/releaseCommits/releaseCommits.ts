@@ -1,6 +1,6 @@
-import { classificationToBumpLevel } from "./bumpLevel";
-import { subjectToClassification } from "./commitClassification";
-import type { BumpLevel } from "./bumpLevel";
+import { classificationToBumpLevel } from "../bumpLevel/bumpLevel";
+import { subjectToClassification } from "../commitClassification/commitClassification";
+import type { BumpLevel } from "../bumpLevel/bumpLevel";
 
 /** Runs a git command and resolves to its stdout. */
 export type GitRunner = (args: readonly string[]) => Promise<string>;

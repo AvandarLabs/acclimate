@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   IMPECCABLE_SKILL_NAME,
   SELF_INSTALLING_SKILL_NAMES,
-} from "../constants";
+} from "../skills.constants";
 import { installSkills, updateSkills } from "./syncSkills";
 import type { CommandResult, CommandSpec } from "../skills.types";
 

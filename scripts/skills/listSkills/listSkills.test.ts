@@ -6,7 +6,7 @@ import { Acclimate } from "../../../src";
 import {
   IMPECCABLE_SKILL_NAME,
   SELF_INSTALLING_SKILL_NAMES,
-} from "../constants";
+} from "../skills.constants";
 import { listSkills } from "./listSkills";
 import type { CommandResult } from "../skills.types";
 

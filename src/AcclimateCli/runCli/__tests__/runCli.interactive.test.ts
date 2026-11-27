@@ -1,6 +1,6 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
-import { createCli } from "@/AcclimateCli/createCli";
+import { createCli } from "@/AcclimateCli/createCli/createCli";
 import { runCli } from "@/AcclimateCli/runCli/runCli";
 import { expectRejectedCliErrorCode } from "./runCli.testHelpers";
 import type { ActionArgs } from "./runCli.testHelpers";
@@ -112,7 +112,8 @@ describe("runCli - interactive menus, /dev/tty isolation, and unattended fallbac
       },
     });
 
-    // Wait a tick for the first menu to attach, jump to "json" (G) so it redraws, then confirm (Enter), then toggle Yes (k + Enter).
+    // Wait a tick for the first menu to attach, jump to "json" (G) so it
+    // redraws, then confirm (Enter), then toggle Yes (k + Enter).
     await new Promise((resolve) => {
       setTimeout(resolve, 10);
     });
@@ -193,7 +194,8 @@ describe("runCli - interactive menus, /dev/tty isolation, and unattended fallbac
     await new Promise((resolve) => {
       setTimeout(resolve, 10);
     });
-    // Commands sorted alphabetically: check (0), coverage (1). Press j + Enter for coverage.
+    // Commands sorted alphabetically: check (0), coverage (1). Press j + Enter
+    // for coverage.
     ttyMock.input.write("j\r");
     await new Promise((resolve) => {
       setTimeout(resolve, 10);

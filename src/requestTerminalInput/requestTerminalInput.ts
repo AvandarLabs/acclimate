@@ -1,5 +1,5 @@
 import { CliError } from "@/CliError";
-import { generateTerminalMessage } from "@/generateTerminalMessage";
+import { generateTerminalMessage } from "@/generateTerminalMessage/generateTerminalMessage";
 import { requestChoiceMenu } from "@/requestChoiceMenu/requestChoiceMenu";
 import { createLineReader } from "@/terminalSession/createLineReader/createLineReader";
 import { makeTerminalSessionFromPromptIo } from "@/terminalSession/makeTerminalSessionFromPromptIo/makeTerminalSessionFromPromptIo";
@@ -29,7 +29,7 @@ export type RequestTerminalInputResponseOptions = {
    */
   defaultValue?: CliParamScalarValue;
 
-  /** Allowed discrete values; when present, renders an interactive choice menu. */
+  /** Allowed discrete values; when present, renders a choice menu. */
   choices?: readonly CliParamScalarValue[];
 
   /** Optional validator returning `true` or an inline error string to retry. */

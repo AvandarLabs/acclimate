@@ -165,7 +165,8 @@ export type AcclimateFacade = {
 
   /**
    * Write a semantic `error` line (`❌ ...`) to `stderr`, followed by an
-   * indented `warning` recovery hint (`  ⚠️ ...`) when `options.hint` is given.
+   * indented `warning` recovery hint (`  ⚠️ ...`) when `options.hint` is
+   * given.
    */
   printError: (
     message: string,

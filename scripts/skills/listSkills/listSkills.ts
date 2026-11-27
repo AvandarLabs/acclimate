@@ -3,10 +3,10 @@ import {
   printHeading,
   printInfo,
   printWarning,
-} from "../cliOutput/cliOutput";
-import { readInstalledSkills } from "../installedSkills/readInstalledSkills";
-import { runCommand } from "../runCommand/runCommand";
-import { readSkillSourceGroups } from "../skillsLock/readSkillsLock";
+} from "../cliOutput";
+import { readInstalledSkills } from "../readInstalledSkills/readInstalledSkills";
+import { runCommand } from "../runCommand";
+import { readSkillSourceGroups } from "../readSkillsLock/readSkillsLock";
 import { buildSkillTable } from "./buildSkillTable/buildSkillTable";
 import { createSkillListingRows } from "./createSkillListingRows/createSkillListingRows";
 import type { CommandRunner, SkillListingRow } from "../skills.types";

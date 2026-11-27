@@ -1,4 +1,4 @@
-import { Acclimate } from "../../../src";
+import { Acclimate } from "../../src";
 
 /**
  * Semantic output helpers.

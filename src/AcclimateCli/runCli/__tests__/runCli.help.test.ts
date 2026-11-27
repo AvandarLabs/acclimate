@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createCli } from "@/AcclimateCli/createCli";
+import { createCli } from "@/AcclimateCli/createCli/createCli";
 import { runCli } from "@/AcclimateCli/runCli/runCli";
 import { createTheme } from "@/theme/createTheme/createTheme";
 import type { ActionArgs } from "./runCli.testHelpers";
