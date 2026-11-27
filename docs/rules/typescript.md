@@ -9,8 +9,8 @@
   - Use higher-order functions (`map`, `filter`, `reduce`).
   - Avoid `for` and `while` loops when a declarative transform is clearer.
 - Use named exports instead of default exports.
-- Keep lines and comments within 80 characters (enforced by ESLint `max-len`
-  and Prettier `printWidth`).
+- Keep lines and comments within 80 characters (oxfmt `printWidth`
+  wraps code; comments are kept short by hand).
 - If a docstring fits in 80 characters, then single-line it. Example:
 
   ```ts
@@ -30,7 +30,7 @@
   }
   ```
 
-- Always use block bodies for arrow functions (enforced by ESLint
+- Always use block bodies for arrow functions (enforced by oxlint
   `arrow-body-style`).
 - Use string interpolation instead of concatenation. Examples:
 
@@ -126,7 +126,7 @@
 
 - Declare types for variables, functions, parameters, and return values at
   module boundaries and top-level declarations (enforced at module boundaries
-  by ESLint `@typescript-eslint/explicit-module-boundary-types`).
+  by oxlint `@typescript-eslint/explicit-module-boundary-types`).
   - Avoid redundant annotations for local variables inside a function.
   - Avoid redundant annotations for nested arrow functions (e.g. inline
     callbacks).
@@ -222,10 +222,10 @@
   export type { CliOptionParam } from "./AcclimateCli.types";
   ```
 
-- Relative imports omit file extensions (enforced by `tsconfig.json` and
-  ESLint `import-x/extensions`).
-- Import ordering is managed by Prettier
-  (`@ianvs/prettier-plugin-sort-imports`).
+- Relative imports omit file extensions (enforced by `tsconfig.json`:
+  `allowImportingTsExtensions` is `false`).
+- Import ordering is managed by oxfmt (`importOrder`
+  in `.oxfmtrc.json`).
 
 ## File, Directory, and Module Conventions
 

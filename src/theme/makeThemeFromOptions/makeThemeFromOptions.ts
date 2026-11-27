@@ -40,9 +40,8 @@ export function makeThemeFromOptions(
     options.stream !== undefined ||
     options.isTTY !== undefined ||
     options.env !== undefined;
-  const computedStreamColor =
-    hasStreamTarget ?
-      isColorEnabledForStream({
+  const computedStreamColor = hasStreamTarget
+    ? isColorEnabledForStream({
         stream: options.stream,
         isTTY: options.isTTY,
         env: options.env,
@@ -52,17 +51,17 @@ export function makeThemeFromOptions(
   if (options.theme !== undefined && _isSemanticTheme(options.theme)) {
     const effectiveColor =
       options.color ?? computedStreamColor ?? options.theme.isColorEnabled;
-    return effectiveColor === options.theme.isColorEnabled ?
-        options.theme
+    return effectiveColor === options.theme.isColorEnabled
+      ? options.theme
       : options.theme.withColor(effectiveColor);
   }
 
   const effectiveColor =
     options.color ?? computedStreamColor ?? options.defaultColor;
   const mergedPalette =
-    options.fallbackPalette || options.theme ?
-      { ...options.fallbackPalette, ...options.theme }
-    : undefined;
+    options.fallbackPalette || options.theme
+      ? { ...options.fallbackPalette, ...options.theme }
+      : undefined;
 
   return createTheme({
     color: effectiveColor,

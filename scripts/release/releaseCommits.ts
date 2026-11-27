@@ -61,9 +61,9 @@ export function selectReleaseCandidates(params: {
     }
     const classification = subjectToClassification(commit.subject);
     const knownBump =
-      classification === undefined ? undefined : (
-        classificationToBumpLevel({ classification, currentMajorVersion })
-      );
+      classification === undefined
+        ? undefined
+        : classificationToBumpLevel({ classification, currentMajorVersion });
     return knownBump === "none" ? [] : [{ ...commit, knownBump }];
   });
 }
@@ -134,8 +134,8 @@ async function _readCommitDiff(
   ]).catch(() => {
     return "";
   });
-  return diff.length > charBudget ?
-      `${diff.slice(0, charBudget)}\n[diff truncated]`
+  return diff.length > charBudget
+    ? `${diff.slice(0, charBudget)}\n[diff truncated]`
     : diff;
 }
 

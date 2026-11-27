@@ -25,19 +25,19 @@ function _deps(
     runGit,
     fetchFn: vi.fn((url: string) => {
       return Promise.resolve(
-        url.includes("registry.npmjs.org") ?
-          new Response("{}", { status: 200 })
-        : new Response(
-            JSON.stringify({
-              content: [
-                {
-                  type: "text",
-                  text: '{"notes":[{"text":"Adds thing.","commits":["aaaaaaa"],"bump":"minor"}]}',
-                },
-              ],
-            }),
-            { status: 200 },
-          ),
+        url.includes("registry.npmjs.org")
+          ? new Response("{}", { status: 200 })
+          : new Response(
+              JSON.stringify({
+                content: [
+                  {
+                    type: "text",
+                    text: '{"notes":[{"text":"Adds thing.","commits":["aaaaaaa"],"bump":"minor"}]}',
+                  },
+                ],
+              }),
+              { status: 200 },
+            ),
       );
     }) as unknown as typeof fetch,
     apiKey: "key",
@@ -96,9 +96,9 @@ describe("ensureChangesets", () => {
     const deps = _deps({
       fetchFn: ((url: string) => {
         return Promise.resolve(
-          url.includes("registry.npmjs.org") ?
-            new Response("{}", { status: 200 })
-          : new Response("boom", { status: 500 }),
+          url.includes("registry.npmjs.org")
+            ? new Response("{}", { status: 200 })
+            : new Response("boom", { status: 500 }),
         );
       }) as unknown as typeof fetch,
     });

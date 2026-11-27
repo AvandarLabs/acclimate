@@ -48,19 +48,19 @@ src/
 
 <small>
 
-| Unit | What it is |
-| --- | --- |
-| `src/index.ts` | The package's public barrel export. Re-exports `Acclimate`, `CLIError`, and parameter and builder types for downstream CLIs. |
-| `CLIError` | Structured error class thrown on invalid CLI builder configuration, unrecognized or incomplete flags, missing required inputs, and failed value validation. |
-| `requestTerminalInput` | Reads interactive answers from `node:readline/promises` when a missing parameter enables `askIfEmpty`. Called by `runCLI`. |
-| `CLIParam.types.ts` | Defines scalar and variadic parameter configuration shapes and the `ValueOfParam` type mapper consumed by `AcclimateCLI.types.ts`. |
-| `AcclimateCLI.types.ts` | Defines the immutable fluent builder interface `IAcclimateCLI`, its `CLIState` snapshot, and `FullCLIArgValues` inference. |
-| `AcclimateCLI` | Implements the immutable builder returned by `createCLI`, validating positional ordering rules inside `addPositionalArg`. |
-| `createCLI` | Public factory that seeds `AcclimateCLI` with empty positional, option, global-option, and command collections. |
-| `generateHelpText` | Formats a CLI's name, description, positional arguments, options, global options<sup>G2</sup>, and sub-commands into ANSI terminal output. |
-| `runCLI` | Entry point that executes a CLI against an `argv` array, coordinating tokenization, prompting, validation, and action dispatch. |
-| `tokenizeCLIInput` | Pure functional scanner that resolves sub-commands and splits raw `argv` tokens into positional tokens, local options, and global options<sup>G2</sup>. |
-| `parseCLIParamValue` | Pure scalar parser and validator that converts one raw string (or default) and enforces numeric parsing, `choices`, and custom validators. |
+| Unit                    | What it is                                                                                                                                                  |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/index.ts`          | The package's public barrel export. Re-exports `Acclimate`, `CLIError`, and parameter and builder types for downstream CLIs.                                |
+| `CLIError`              | Structured error class thrown on invalid CLI builder configuration, unrecognized or incomplete flags, missing required inputs, and failed value validation. |
+| `requestTerminalInput`  | Reads interactive answers from `node:readline/promises` when a missing parameter enables `askIfEmpty`. Called by `runCLI`.                                  |
+| `CLIParam.types.ts`     | Defines scalar and variadic parameter configuration shapes and the `ValueOfParam` type mapper consumed by `AcclimateCLI.types.ts`.                          |
+| `AcclimateCLI.types.ts` | Defines the immutable fluent builder interface `IAcclimateCLI`, its `CLIState` snapshot, and `FullCLIArgValues` inference.                                  |
+| `AcclimateCLI`          | Implements the immutable builder returned by `createCLI`, validating positional ordering rules inside `addPositionalArg`.                                   |
+| `createCLI`             | Public factory that seeds `AcclimateCLI` with empty positional, option, global-option, and command collections.                                             |
+| `generateHelpText`      | Formats a CLI's name, description, positional arguments, options, global options<sup>G2</sup>, and sub-commands into ANSI terminal output.                  |
+| `runCLI`                | Entry point that executes a CLI against an `argv` array, coordinating tokenization, prompting, validation, and action dispatch.                             |
+| `tokenizeCLIInput`      | Pure functional scanner that resolves sub-commands and splits raw `argv` tokens into positional tokens, local options, and global options<sup>G2</sup>.     |
+| `parseCLIParamValue`    | Pure scalar parser and validator that converts one raw string (or default) and enforces numeric parsing, `choices`, and custom validators.                  |
 
 </small>
 
@@ -88,7 +88,7 @@ flowchart TD
   parse --> out
 ```
 
-> *Tokenization descends through sub-commands while scanning `argv`, so option arity (boolean flag versus value-taking option) is always checked against the exact command that owns those flags.*
+> _Tokenization descends through sub-commands while scanning `argv`, so option arity (boolean flag versus value-taking option) is always checked against the exact command that owns those flags._
 
 The four strands depend on each other in order: §4 defines the discriminated parameter types and error codes, §5 uses the CLI's declared option schema to tokenize `argv` and resolve sub-commands, §6 consumes the tokenized output to allocate and validate variadic arrays and options, and §7 reads the same `variadic` flag on `CLIState.positionalArgs` to format help output.
 
@@ -104,13 +104,19 @@ This strand establishes the public API contract that both downstream TypeScript 
 
 ```typescript {1-8}
 export type ValueOfParam<T extends CLIParam | CLIVariadicPositionalParam> =
-  T extends CLIVariadicStringParam<string, infer PValue> ? PValue[]
-  : T extends CLIVariadicNumberParam<string, infer PValue> ? PValue[]
-  : T extends CLIVariadicBooleanParam<string> ? boolean[]
-  : T extends CLIStringParam<string, infer PValue> ? PValue
-  : T extends CLINumberParam<string, infer PValue> ? PValue
-  : T extends CLIBooleanParam<string> ? boolean
-  : never;
+  T extends CLIVariadicStringParam<string, infer PValue>
+    ? PValue[]
+    : T extends CLIVariadicNumberParam<string, infer PValue>
+      ? PValue[]
+      : T extends CLIVariadicBooleanParam<string>
+        ? boolean[]
+        : T extends CLIStringParam<string, infer PValue>
+          ? PValue
+          : T extends CLINumberParam<string, infer PValue>
+            ? PValue
+            : T extends CLIBooleanParam<string>
+              ? boolean
+              : never;
 ```
 
 Because `CLIVariadicPositionalParam` constrains `variadic` to literal `true` and `CLIScalarPositionalParam` constrains it to `false | undefined`, TypeScript contextually preserves `variadic: true` inside `addPositionalArg` without requiring a `const` type parameter on `P` (which would over-narrow plain `defaultValue: "us-east-1"` strings into literal types). The variadic branches appear first in `ValueOfParam` so `variadic: true` configs resolve to `PValue[]` while omitted or `variadic: false` configs fall through to the existing scalar branches.
@@ -166,7 +172,7 @@ stateDiagram-v2
   delegated --> [*] : returns child tokenizeCLIInput result
 ```
 
-> *`tokenizeCLIInput` moves a `TokenScanState` across four modes; reaching `pendingOption` at end of input, before `--`, or before another flag throws `CLIError` with code `missing_option_value`.*
+> _`tokenizeCLIInput` moves a `TokenScanState` across four modes; reaching `pendingOption` at end of input, before `--`, or before another flag throws `CLIError` with code `missing_option_value`._
 
 ### 5.1 Ordered token-scanning steps inside `tokenizeCLIInput`
 
@@ -228,10 +234,10 @@ When a sub-command matches, `_mergeParentGlobalOptions` copies the parent's `glo
 
 ### 5.2 Worked trace across two boundary inputs
 
-| Input tokens | Trace of `TokenScanState` transitions | Output |
-| --- | --- | --- |
+| Input tokens                                                     | Trace of `TokenScanState` transitions                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Output                                                                                                                                              |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `["-v", "coverage", "src/a.ts", "--format", "json", "--", "-x"]` | 1. `-v` matches root global boolean `--verbose` -> records `rawGlobalOptionArgs["--verbose"] = ""`. 2. `coverage` matches root command (`rawPositionalArgs` and `rawOptionArgs` are empty) -> merges `--verbose` into `coverage` and recurses on remaining 5 tokens. 3. `src/a.ts` -> `rawPositionalArgs = ["src/a.ts"]`. 4. `--format` (string) -> sets `pendingOption = --format`. 5. `json` -> records `rawOptionArgs["--format"] = "json"`, clears `pendingOption`. 6. `--` -> sets `isAfterDoubleDash = true`. 7. `-x` -> appended verbatim to `rawPositionalArgs`. | `targetCLI: coverage`, `rawPositionalArgs: ["src/a.ts", "-x"]`, `rawOptionArgs: { "--format": "json" }`, `rawGlobalOptionArgs: { "--verbose": "" }` |
-| `["--config", "coverage", "coverage", "src/a.ts"]` | 1. `--config` (root global string) -> sets `pendingOption = --config`. 2. First `coverage` is consumed by `pendingOption` (`rawGlobalOptionArgs["--config"] = "coverage"`), not matched as a sub-command. 3. Second `coverage` arrives while `pendingOption` is cleared -> matches sub-command `coverage` and recurses on `["src/a.ts"]`. | `targetCLI: coverage`, `rawPositionalArgs: ["src/a.ts"]`, `rawGlobalOptionArgs: { "--config": "coverage" }` |
+| `["--config", "coverage", "coverage", "src/a.ts"]`               | 1. `--config` (root global string) -> sets `pendingOption = --config`. 2. First `coverage` is consumed by `pendingOption` (`rawGlobalOptionArgs["--config"] = "coverage"`), not matched as a sub-command. 3. Second `coverage` arrives while `pendingOption` is cleared -> matches sub-command `coverage` and recurses on `["src/a.ts"]`.                                                                                                                                                                                                                                | `targetCLI: coverage`, `rawPositionalArgs: ["src/a.ts"]`, `rawGlobalOptionArgs: { "--config": "coverage" }`                                         |
 
 ### 5.3 Intentional compatibility boundary on option value consumption
 
@@ -255,12 +261,12 @@ In `src/AcclimateCLI/runCLI/runCLI.ts`, `_parsePositionalArgs` skips the `too_ma
 
 When the variadic slice is empty, `_parseVariadicPositionalArg` handles four cases in order:
 
-| Condition | Result |
-| --- | --- |
-| `askIfEmpty` set, user enters non-empty answer | Single-element array `[parsedAnswer]` validated through `parseCLIParamValue` |
-| `askIfEmpty` set, user submits blank and `defaultValue` is configured | Validated fresh mutable copy of `defaultValue` (even when `required: true`) |
+| Condition                                                                           | Result                                                                                              |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `askIfEmpty` set, user enters non-empty answer                                      | Single-element array `[parsedAnswer]` validated through `parseCLIParamValue`                        |
+| `askIfEmpty` set, user submits blank and `defaultValue` is configured               | Validated fresh mutable copy of `defaultValue` (even when `required: true`)                         |
 | `required: true` with no value supplied (non-interactive or blank without defaults) | Throws `CLIError` (`missing_required_positional_arg`), ignoring `defaultValue` when non-interactive |
-| `required: false` with no value supplied | Validated fresh mutable copy of `defaultValue` when set, otherwise `[]` |
+| `required: false` with no value supplied                                            | Validated fresh mutable copy of `defaultValue` when set, otherwise `[]`                             |
 
 Two subtle guarantees hold here:
 
@@ -357,13 +363,13 @@ In `src/AcclimateCLI/generateHelpText/generateHelpText.ts`, `_formatParamLine` a
 
 <small>
 
-| Term | Meaning |
-| --- | --- |
-| **G1** End-of-options separator | The literal `--` token in `argv` that ends flag and sub-command parsing so every subsequent token is treated verbatim as a positional argument. |
-| **G2** Global option | A named CLI option registered with `addGlobalOption` on a parent CLI that is automatically inherited by every nested sub-command and may be passed before or after the sub-command name. |
-| **G3** Pending option | The tokenizer state entered after reading a value-taking option (`string` or `number`) without an inline `=value`, in which the immediately following token must supply that option's single raw value. |
-| **G4** Scalar positional argument | A single-value positional parameter (`variadic` omitted or `false`) that consumes at most one positional token and passes a `string`, `number`, or `boolean` to `action(args)`. |
-| **G5** Schema-aware tokenization | Scanning raw `argv` tokens against the active CLI's declared options, aliases, and sub-commands so boolean flags consume zero tokens and value-taking options consume exactly one token. |
+| Term                                | Meaning                                                                                                                                                                                                      |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **G1** End-of-options separator     | The literal `--` token in `argv` that ends flag and sub-command parsing so every subsequent token is treated verbatim as a positional argument.                                                              |
+| **G2** Global option                | A named CLI option registered with `addGlobalOption` on a parent CLI that is automatically inherited by every nested sub-command and may be passed before or after the sub-command name.                     |
+| **G3** Pending option               | The tokenizer state entered after reading a value-taking option (`string` or `number`) without an inline `=value`, in which the immediately following token must supply that option's single raw value.      |
+| **G4** Scalar positional argument   | A single-value positional parameter (`variadic` omitted or `false`) that consumes at most one positional token and passes a `string`, `number`, or `boolean` to `action(args)`.                              |
+| **G5** Schema-aware tokenization    | Scanning raw `argv` tokens against the active CLI's declared options, aliases, and sub-commands so boolean flags consume zero tokens and value-taking options consume exactly one token.                     |
 | **G6** Variadic positional argument | A repeatable trailing positional parameter configured with `variadic: true` that collects zero-or-more (`required: false`) or one-or-more (`required: true`) remaining positional tokens into a typed array. |
 
 </small>

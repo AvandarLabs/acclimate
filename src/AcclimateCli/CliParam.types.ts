@@ -250,10 +250,16 @@ export type CliOptionParam<
 
 /** Infers the parsed TypeScript runtime value type for a parameter config. */
 export type ValueOfParam<T extends CliParam | CliVariadicPositionalParam> =
-  T extends CliVariadicStringParam<string, infer PValue> ? PValue[]
-  : T extends CliVariadicNumberParam<string, infer PValue> ? PValue[]
-  : T extends CliVariadicBooleanParam<string> ? boolean[]
-  : T extends CliStringParam<string, infer PValue> ? PValue
-  : T extends CliNumberParam<string, infer PValue> ? PValue
-  : T extends CliBooleanParam<string> ? boolean
-  : never;
+  T extends CliVariadicStringParam<string, infer PValue>
+    ? PValue[]
+    : T extends CliVariadicNumberParam<string, infer PValue>
+      ? PValue[]
+      : T extends CliVariadicBooleanParam<string>
+        ? boolean[]
+        : T extends CliStringParam<string, infer PValue>
+          ? PValue
+          : T extends CliNumberParam<string, infer PValue>
+            ? PValue
+            : T extends CliBooleanParam<string>
+              ? boolean
+              : never;

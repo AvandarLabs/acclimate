@@ -138,8 +138,9 @@ export async function openTerminalSession(
     return undefined;
   }
 
-  const ttySession =
-    options.openTty ? await options.openTty() : await _openPosixTtySession(env);
+  const ttySession = options.openTty
+    ? await options.openTty()
+    : await _openPosixTtySession(env);
 
   return ttySession ?? _makeFallbackTtySession({ stdin, stderr, env });
 }

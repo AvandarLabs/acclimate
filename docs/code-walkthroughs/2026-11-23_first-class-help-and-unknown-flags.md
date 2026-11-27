@@ -49,21 +49,21 @@ src/
 
 <small>
 
-| Unit | What it is |
-| --- | --- |
-| `src/index.ts` | Public package entry point. Exports `Acclimate`, `executeCLI`, `generateHelpText`, `CLIError`, and CLI builder and parameter types. |
-| `Acclimate.ts` | Public facade exposing `createCLI`, `run`, `log`, and `requestInput`. `Acclimate.run` wires `process.argv.slice(2)`, `process.stdout`, `process.stderr`, and `process.exitCode` into `executeCLI`. |
-| `CLIError.ts` | Structured error thrown for invalid CLI configuration, tokenization failures, missing required inputs, and value validation failures. Stores `code`, `cliName`, `commandPath`, `hint`, and `usage`. |
-| `CLIParam.types.ts` | Shared parameter, `CLIExample`, and `OutputStream` types imported by `AcclimateCLI.types.ts` and re-exported at the package root. |
-| `AcclimateCLI.types.ts` | Immutable fluent builder contract (`IAcclimateCLI`), internal `CLIState` snapshot, and argument type inference (`FullCLIArgValues`). |
-| `AcclimateCLI.ts` | Immutable builder implementation created by `createCLI`, including `.usage(...)`, `.addExample(...)`, and async-compatible `.action(...)`. |
-| `defaultCLIState.ts` | Initial empty `CLIState` template used by `createCLI`, seeding `usage: undefined` and `examples: []`. |
-| `generateHelpText.ts` | Formats a CLI's full command path<sup>G2</sup>, purpose, usage synopsis, positional arguments, options, global options<sup>G5</sup>, choices, defaults, examples, and sub-commands into ANSI text. |
-| `attachCLIErrorHelpContext.ts` | Shared helper called by `tokenizeCLIInput` and `runCLI` to attach a command's path, `--help` recovery hint<sup>G7</sup>, and generated usage text onto a `CLIError`. |
-| `tokenizeCLIInput.ts` | Pure functional left-to-right token scanner that descends into sub-commands, merges parent global options<sup>G5</sup>, detects built-in `-h`/`--help`, and defers tokenization errors while checking for help. |
-| `runCLI.ts` | Core command execution pipeline that short-circuits built-in help to `stdout`, parses and validates arguments, enriches post-tokenization `CLIError` instances, and awaits command actions. |
-| `formatCLIError.ts` | Pure formatter that turns a `CLIError` into red error text, an indented yellow `⚠️` recovery hint<sup>G7</sup>, and the failing command's usage block for `stderr`. |
-| `executeCLI.ts` | Process-boundary runner that invokes `runCLI`, formats caught `CLIError` instances onto `stderr` without a stack trace, and returns exit status `0` or `1`. |
+| Unit                           | What it is                                                                                                                                                                                                      |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/index.ts`                 | Public package entry point. Exports `Acclimate`, `executeCLI`, `generateHelpText`, `CLIError`, and CLI builder and parameter types.                                                                             |
+| `Acclimate.ts`                 | Public facade exposing `createCLI`, `run`, `log`, and `requestInput`. `Acclimate.run` wires `process.argv.slice(2)`, `process.stdout`, `process.stderr`, and `process.exitCode` into `executeCLI`.              |
+| `CLIError.ts`                  | Structured error thrown for invalid CLI configuration, tokenization failures, missing required inputs, and value validation failures. Stores `code`, `cliName`, `commandPath`, `hint`, and `usage`.             |
+| `CLIParam.types.ts`            | Shared parameter, `CLIExample`, and `OutputStream` types imported by `AcclimateCLI.types.ts` and re-exported at the package root.                                                                               |
+| `AcclimateCLI.types.ts`        | Immutable fluent builder contract (`IAcclimateCLI`), internal `CLIState` snapshot, and argument type inference (`FullCLIArgValues`).                                                                            |
+| `AcclimateCLI.ts`              | Immutable builder implementation created by `createCLI`, including `.usage(...)`, `.addExample(...)`, and async-compatible `.action(...)`.                                                                      |
+| `defaultCLIState.ts`           | Initial empty `CLIState` template used by `createCLI`, seeding `usage: undefined` and `examples: []`.                                                                                                           |
+| `generateHelpText.ts`          | Formats a CLI's full command path<sup>G2</sup>, purpose, usage synopsis, positional arguments, options, global options<sup>G5</sup>, choices, defaults, examples, and sub-commands into ANSI text.              |
+| `attachCLIErrorHelpContext.ts` | Shared helper called by `tokenizeCLIInput` and `runCLI` to attach a command's path, `--help` recovery hint<sup>G7</sup>, and generated usage text onto a `CLIError`.                                            |
+| `tokenizeCLIInput.ts`          | Pure functional left-to-right token scanner that descends into sub-commands, merges parent global options<sup>G5</sup>, detects built-in `-h`/`--help`, and defers tokenization errors while checking for help. |
+| `runCLI.ts`                    | Core command execution pipeline that short-circuits built-in help to `stdout`, parses and validates arguments, enriches post-tokenization `CLIError` instances, and awaits command actions.                     |
+| `formatCLIError.ts`            | Pure formatter that turns a `CLIError` into red error text, an indented yellow `⚠️` recovery hint<sup>G7</sup>, and the failing command's usage block for `stderr`.                                             |
+| `executeCLI.ts`                | Process-boundary runner that invokes `runCLI`, formats caught `CLIError` instances onto `stderr` without a stack trace, and returns exit status `0` or `1`.                                                     |
 
 </small>
 
@@ -95,7 +95,7 @@ flowchart TD
   action -->|"no"| helpOut
 ```
 
-> *Built-in help flags<sup>G1</sup> short-circuit inside `runCLI` immediately after `tokenizeCLIInput`, preventing required-parameter errors, interactive prompts, and command actions from executing. Any `CLIError` raised during tokenization or parsing carries `commandPath`, `hint`, and `usage` so `executeCLI` writes formatted diagnostics exclusively to `stderr`.*
+> _Built-in help flags<sup>G1</sup> short-circuit inside `runCLI` immediately after `tokenizeCLIInput`, preventing required-parameter errors, interactive prompts, and command actions from executing. Any `CLIError` raised during tokenization or parsing carries `commandPath`, `hint`, and `usage` so `executeCLI` writes formatted diagnostics exclusively to `stderr`._
 
 The three strands build on each other cleanly: §4 establishes built-in `-h`/`--help` detection, command path<sup>G2</sup> tracking, and zero-side-effect short-circuiting during tokenization and execution; §5 formats the complete usage document rendered both for `--help` on `stdout` and for error output on `stderr`; and §6 enriches `CLIError`, formats `stderr` diagnostics, and binds `Acclimate.run` to nonzero exit codes through `executeCLI`.
 
@@ -122,7 +122,7 @@ stateDiagram-v2
   delegated --> [*] : returns child tokenizeCLIInput result
 ```
 
-> *Once `helpRequested` is entered before `--`, subsequent tokens are ignored and any earlier `scanError` on the active command is discarded. When scanning ends without `isHelpRequested`, the first recorded `scanError` or dangling `pendingOption` throws an enriched `CLIError`.*
+> _Once `helpRequested` is entered before `--`, subsequent tokens are ignored and any earlier `scanError` on the active command is discarded. When scanning ends without `isHelpRequested`, the first recorded `scanError` or dangling `pendingOption` throws an enriched `CLIError`._
 
 **File: `src/AcclimateCLI/runCLI/tokenizeCLIInput/tokenizeCLIInput.ts`**
 
@@ -149,12 +149,12 @@ Recording the first `unknown_option` or `missing_option_value` as a deferred sca
 
 ### 4.2 Worked trace across help precedence and unknown-flag boundaries
 
-| Input tokens | Tokenizer transitions | Result |
-| --- | --- | --- |
+| Input tokens                              | Tokenizer transitions                                                                                                                                                                                                                                                                       | Result                                                                                                                                                            |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `["-v", "coverage", "--bogus", "--help"]` | 1. `-v` records root global `--verbose`. 2. `coverage` merges parent globals into `coverage` and recurses with `commandPath = ["avandar-lint", "coverage"]`. 3. `--bogus` records `scanError = unknown_option`. 4. `--help` matches `_isBuiltinHelpFlag` and sets `isHelpRequested = true`. | Returns `isHelpRequested: true` for `avandar-lint coverage`; `runCLI` writes `coverage` help with inherited `--verbose` to `stdout` and runs no action or prompt. |
-| `["coverage", "--format", "--help"]` | 1. Descends into `coverage`. 2. `--format` enters `pendingOption`. 3. `--help` triggers `_isBuiltinHelpFlag` at the top of `_consumePendingOptionToken`, clearing `pendingOption` and setting `isHelpRequested = true`. | Returns `isHelpRequested: true` for `avandar-lint coverage`; does not fail with `missing_option_value`. |
-| `["coverage", "--", "-h", "--help"]` | 1. Descends into `coverage`. 2. `--` sets `isAfterDoubleDash = true`. 3. `-h` and `--help` are appended verbatim to `rawPositionalArgs`. | Returns `isHelpRequested: false` with `rawPositionalArgs: ["-h", "--help"]`. |
-| `["coverage", "--bogus"]` | 1. Descends into `coverage` with merged parent globals. 2. `--bogus` records `scanError` with `commandPath = ["avandar-lint", "coverage"]`, recovery hint<sup>G7</sup>, and `coverage` usage. 3. Input ends with `isHelpRequested = false`. | Throws enriched `CLIError` (`code: "unknown_option"`) before `runCLI` validates required args or prompts. |
+| `["coverage", "--format", "--help"]`      | 1. Descends into `coverage`. 2. `--format` enters `pendingOption`. 3. `--help` triggers `_isBuiltinHelpFlag` at the top of `_consumePendingOptionToken`, clearing `pendingOption` and setting `isHelpRequested = true`.                                                                     | Returns `isHelpRequested: true` for `avandar-lint coverage`; does not fail with `missing_option_value`.                                                           |
+| `["coverage", "--", "-h", "--help"]`      | 1. Descends into `coverage`. 2. `--` sets `isAfterDoubleDash = true`. 3. `-h` and `--help` are appended verbatim to `rawPositionalArgs`.                                                                                                                                                    | Returns `isHelpRequested: false` with `rawPositionalArgs: ["-h", "--help"]`.                                                                                      |
+| `["coverage", "--bogus"]`                 | 1. Descends into `coverage` with merged parent globals. 2. `--bogus` records `scanError` with `commandPath = ["avandar-lint", "coverage"]`, recovery hint<sup>G7</sup>, and `coverage` usage. 3. Input ends with `isHelpRequested = false`.                                                 | Throws enriched `CLIError` (`code: "unknown_option"`) before `runCLI` validates required args or prompts.                                                         |
 
 ### 4.3 `runCLI` short-circuits help to injectable `stdout` and awaits async actions
 
@@ -233,9 +233,11 @@ export async function executeCLI(
     return 0;
   } catch (error) {
     const errorOutput =
-      error instanceof CLIError ? formatCLIError(error)
-      : error instanceof Error ? (error.stack ?? error.message)
-      : String(error);
+      error instanceof CLIError
+        ? formatCLIError(error)
+        : error instanceof Error
+          ? (error.stack ?? error.message)
+          : String(error);
     stderr.write(`${errorOutput}\n`);
     options.onExitCode?.(1);
     return 1;
@@ -349,14 +351,14 @@ Usage
 
 <small>
 
-| Term | Meaning |
-| --- | --- |
-| **G1** Built-in help flag | Acclimate's automatic `-h` and `--help` flags recognized at root and every sub-command unless explicitly registered by the CLI author. |
-| **G2** Command path | The sequence of root CLI name and matched sub-command tokens typed by the user (for example `["avandar-lint", "coverage"]`), used in help headers, usage synopses, and `--help` recovery hints<sup>G7</sup>. |
-| **G3** Deferred scan error | A tokenization failure (`unknown_option` or `missing_option_value`) stored on `TokenScanState.scanError` instead of thrown immediately, so a later built-in `-h` or `--help` before `--` still prints help cleanly. |
-| **G4** End-of-options separator | The literal `--` token in `argv` that ends flag and sub-command parsing so every subsequent token, including `-h` and `--help`, is treated verbatim as a positional argument. |
-| **G5** Global option | A named CLI option registered with `addGlobalOption` on a parent CLI that is automatically inherited by every nested sub-command and included in sub-command help output. |
-| **G6** Help context | The `commandPath`, recovery `hint`, and rendered `usage` attached to a `CLIError` via `withHelpContext` for user-facing `stderr` formatting. |
-| **G7** Recovery hint | The indented yellow warning line (`⚠️ Run <cmd> --help to see available options and usage.`) printed beneath a `CLIError` message on `stderr` to tell the user how to discover valid syntax. |
+| Term                            | Meaning                                                                                                                                                                                                             |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **G1** Built-in help flag       | Acclimate's automatic `-h` and `--help` flags recognized at root and every sub-command unless explicitly registered by the CLI author.                                                                              |
+| **G2** Command path             | The sequence of root CLI name and matched sub-command tokens typed by the user (for example `["avandar-lint", "coverage"]`), used in help headers, usage synopses, and `--help` recovery hints<sup>G7</sup>.        |
+| **G3** Deferred scan error      | A tokenization failure (`unknown_option` or `missing_option_value`) stored on `TokenScanState.scanError` instead of thrown immediately, so a later built-in `-h` or `--help` before `--` still prints help cleanly. |
+| **G4** End-of-options separator | The literal `--` token in `argv` that ends flag and sub-command parsing so every subsequent token, including `-h` and `--help`, is treated verbatim as a positional argument.                                       |
+| **G5** Global option            | A named CLI option registered with `addGlobalOption` on a parent CLI that is automatically inherited by every nested sub-command and included in sub-command help output.                                           |
+| **G6** Help context             | The `commandPath`, recovery `hint`, and rendered `usage` attached to a `CLIError` via `withHelpContext` for user-facing `stderr` formatting.                                                                        |
+| **G7** Recovery hint            | The indented yellow warning line (`⚠️ Run <cmd> --help to see available options and usage.`) printed beneath a `CLIError` message on `stderr` to tell the user how to discover valid syntax.                        |
 
 </small>

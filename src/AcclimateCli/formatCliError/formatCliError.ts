@@ -35,19 +35,21 @@ export function formatCliError(
 
   const headerLines = [
     theme.error(error.message),
-    error.hint !== undefined ?
-      `  ${theme.warning(`⚠️ ${error.hint}`)}`
-    : undefined,
+    error.hint !== undefined
+      ? `  ${theme.warning(`⚠️ ${error.hint}`)}`
+      : undefined,
   ].filter((line): line is string => {
     return line !== undefined;
   });
 
   const usageBlock =
-    error.usage === undefined ? undefined
-    : theme.isColorEnabled ? error.usage
-    : stripAnsi(error.usage);
+    error.usage === undefined
+      ? undefined
+      : theme.isColorEnabled
+        ? error.usage
+        : stripAnsi(error.usage);
 
-  return usageBlock === undefined ?
-      headerLines.join("\n")
+  return usageBlock === undefined
+    ? headerLines.join("\n")
     : `${headerLines.join("\n")}\n\n${usageBlock}`;
 }

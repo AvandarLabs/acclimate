@@ -279,18 +279,15 @@ Backwards-compatible extension of `options`:
      - If `!required`: returns `undefined`.
      - If `required`: throws `CLIError.interactiveInputUnavailable(...)`
        instead of hanging.
-  3. When interactive:
-     - If `choices` is non-empty: delegates to `requestChoiceMenu` (appending an
-       explicit `(skip)` item returning `undefined` when `!required &&
-defaultValue === undefined`).
-     - If `type === "boolean"` and `session.isRawModeSupported`: delegates to
-       `requestChoiceMenu` with `Yes` (`"true"`) / `No` (`"false"`).
-     - Otherwise runs `readline/promises` bound strictly to
-       `{ input: session.input, output: session.output }` (never `stdout`!),
-       validating required, boolean `(y/n)` in non-raw mode, integer numbers for
-       `type === "number"`, and custom `validate`, writing error hints to
-       `session.output` and converting `SIGINT`/`EOF` to
-       `CLIError.promptCancelled`.
+  3. When interactive: - If `choices` is non-empty: delegates to `requestChoiceMenu` (appending an
+     explicit `(skip)` item returning `undefined` when `!required &&
+defaultValue === undefined`). - If `type === "boolean"` and `session.isRawModeSupported`: delegates to
+     `requestChoiceMenu` with `Yes` (`"true"`) / `No` (`"false"`). - Otherwise runs `readline/promises` bound strictly to
+     `{ input: session.input, output: session.output }` (never `stdout`!),
+     validating required, boolean `(y/n)` in non-raw mode, integer numbers for
+     `type === "number"`, and custom `validate`, writing error hints to
+     `session.output` and converting `SIGINT`/`EOF` to
+     `CLIError.promptCancelled`.
 
 ### Built-In `--no-prompt` in `tokenizeCLIInput`
 
@@ -336,14 +333,12 @@ cmd.state.description`). On selection, merges parent `globalOptionArgs`
      `type === "boolean"`, and `requestTerminalInput` for `string` / `number`.
      For variadic positional args with `choices`, prompts via choice menu (with
      skip when optional).
-   - Unattended + missing `askIfEmpty` parameter:
-     - If `required: true`: fails promptly with `CLIError.missingRequiredOption`
-       or `CLIError.missingRequiredPositionalArg`, including a clear unattended
-       message and an actionable recovery hint naming the exact flag or argument
-       and example invocation (for example `Pass --format <value> (for example:
-avandar-lint coverage --format <value>) or run avandar-lint coverage --help.`).
-     - If `required: false`: skips prompting and falls back to `defaultValue`
-       (or `[]` for variadic, or `undefined`).
+   - Unattended + missing `askIfEmpty` parameter: - If `required: true`: fails promptly with `CLIError.missingRequiredOption`
+     or `CLIError.missingRequiredPositionalArg`, including a clear unattended
+     message and an actionable recovery hint naming the exact flag or argument
+     and example invocation (for example `Pass --format <value> (for example:
+avandar-lint coverage --format <value>) or run avandar-lint coverage --help.`). - If `required: false`: skips prompting and falls back to `defaultValue`
+     (or `[]` for variadic, or `undefined`).
 
 ## 6. Stream Separation (`Acclimate` & `executeCLI`)
 

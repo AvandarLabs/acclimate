@@ -76,9 +76,9 @@ export async function promptCliParam(
 
   const description = param.description ? ` (${param.description})` : "";
   const baseMessage =
-    typeof param.askIfEmpty === "object" ?
-      param.askIfEmpty.message
-    : `Please enter a value for ${param.name}${description}`;
+    typeof param.askIfEmpty === "object"
+      ? param.askIfEmpty.message
+      : `Please enter a value for ${param.name}${description}`;
 
   return requestTerminalInput({
     message: `|prompt|${baseMessage}|reset|`,

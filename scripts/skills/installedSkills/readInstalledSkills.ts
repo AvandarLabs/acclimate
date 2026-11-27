@@ -62,9 +62,8 @@ function _createInstalledSkillFromRow(
     // `npx skills` knows nothing about where impeccable came from, because
     // the impeccable CLI installed it. Fill that gap in for the reader.
     source: isImpeccable ? IMPECCABLE_SKILL_SOURCE : reportedSource,
-    agents:
-      Array.isArray(row.agents) ?
-        row.agents.filter((agent): agent is string => {
+    agents: Array.isArray(row.agents)
+      ? row.agents.filter((agent): agent is string => {
           return typeof agent === "string";
         })
       : [],

@@ -21,8 +21,9 @@ function _createCells(row: Readonly<SkillListingRow>): string[] {
 function _colorizeRow(cells: readonly string[], isInstalled: boolean): string {
   const [name, manager, source] = cells;
   const nameColor = isInstalled ? "|bright_white|" : "|yellow|";
-  const note =
-    isInstalled ? "" : `${COLUMN_GAP}|yellow|(${MISSING_NOTE})|reset|`;
+  const note = isInstalled
+    ? ""
+    : `${COLUMN_GAP}|yellow|(${MISSING_NOTE})|reset|`;
   return (
     `${nameColor}${name}|reset|${COLUMN_GAP}` +
     `|cyan|${manager}|reset|${COLUMN_GAP}` +

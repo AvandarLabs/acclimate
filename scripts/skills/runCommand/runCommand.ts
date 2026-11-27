@@ -22,9 +22,8 @@ export function runCommand(
   const { streamOutput = false } = options;
   return new Promise((resolve) => {
     const child = spawn(spec.command, spec.args, {
-      stdio:
-        streamOutput ?
-          ["ignore", "inherit", "inherit"]
+      stdio: streamOutput
+        ? ["ignore", "inherit", "inherit"]
         : ["ignore", "pipe", "pipe"],
     });
 

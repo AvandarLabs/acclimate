@@ -112,9 +112,9 @@ export async function ensureChangesets(
     currentMajorVersion: Number(version.split(".")[0]),
   });
   const fileNames =
-    candidates.length === 0 ?
-      []
-    : await _writeChangesets({ deps, packageName: name, candidates });
+    candidates.length === 0
+      ? []
+      : await _writeChangesets({ deps, packageName: name, candidates });
   if (fileNames.length === 0) {
     deps.log("No releasable changes since the last release.");
     return { kind: "nothing-to-release" };

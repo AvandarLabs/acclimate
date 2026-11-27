@@ -34,8 +34,8 @@ function _getRoleAnsiSequence(options: {
   overrides?: Readonly<SemanticThemePaletteOverrides>;
 }): string {
   const override = options.overrides?.[options.role];
-  return override !== undefined ?
-      _styleInputToAnsiSequence(override)
+  return override !== undefined
+    ? _styleInputToAnsiSequence(override)
     : DEFAULT_DARK_THEME_PALETTE[options.role];
 }
 
@@ -62,8 +62,8 @@ function _buildThemeObject(options: {
 }): SemanticTheme {
   const palette: SemanticThemePalette = { ...options.palette };
   const style = (role: SemanticThemeRole, text: string): string => {
-    return !options.isColorEnabled || text === "" ?
-        text
+    return !options.isColorEnabled || text === ""
+      ? text
       : `${palette[role]}${text}${ANSI_RESET_CODE}`;
   };
   const roleFormatter = (role: SemanticThemeRole) => {

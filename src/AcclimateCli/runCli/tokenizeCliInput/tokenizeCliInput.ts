@@ -64,9 +64,9 @@ function _recordOptionValue(options: {
 }): TokenScanState {
   const { state, entry, rawValue } = options;
   const nextNoPrompt =
-    entry.canonicalName === "--no-prompt" ?
-      rawValue !== "false"
-    : state.isNoPromptRequested;
+    entry.canonicalName === "--no-prompt"
+      ? rawValue !== "false"
+      : state.isNoPromptRequested;
 
   if (entry.isGlobal) {
     return {

@@ -87,11 +87,9 @@ export function generateTerminalMessage(
     return _interpolateParams(message, params).replace(
       COLOR_TOKEN_REGEX,
       (match, tokenName: string) => {
-        return (
-            _lookupTokenCode({ tokenName, palette: theme.palette }) !==
-              undefined
-          ) ?
-            ""
+        return _lookupTokenCode({ tokenName, palette: theme.palette }) !==
+          undefined
+          ? ""
           : match;
       },
     );

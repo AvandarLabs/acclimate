@@ -19,12 +19,12 @@ function _createMockTerminal(
     isTTY: true,
     isRaw: false,
     setRawMode:
-      options.isRawModeSupported !== false ?
-        (mode: boolean) => {
-          rawModeCalls.push(mode);
-          mockInput.isRaw = mode;
-        }
-      : undefined,
+      options.isRawModeSupported !== false
+        ? (mode: boolean) => {
+            rawModeCalls.push(mode);
+            mockInput.isRaw = mode;
+          }
+        : undefined,
   });
 
   const session: TerminalSession = {

@@ -98,12 +98,13 @@ function _parseStringValue(options: {
 }): string | undefined {
   const { cliName, inputValue, defaultValue, paramConfig } = options;
   const parsedValue =
-    inputValue !== undefined ?
-      paramConfig.parser ?
-        paramConfig.parser(inputValue)
-      : inputValue
-    : typeof defaultValue === "string" ? defaultValue
-    : undefined;
+    inputValue !== undefined
+      ? paramConfig.parser
+        ? paramConfig.parser(inputValue)
+        : inputValue
+      : typeof defaultValue === "string"
+        ? defaultValue
+        : undefined;
   if (parsedValue === undefined) {
     return undefined;
   }
@@ -129,16 +130,17 @@ function _parseNumberValue(options: {
 }): number | undefined {
   const { cliName, inputValue, defaultValue, paramConfig } = options;
   const parsedValue =
-    inputValue !== undefined ?
-      paramConfig.parser ?
-        paramConfig.parser(inputValue)
-      : _parseDefaultNumber({
-          cliName,
-          paramName: paramConfig.name,
-          inputValue,
-        })
-    : typeof defaultValue === "number" ? defaultValue
-    : undefined;
+    inputValue !== undefined
+      ? paramConfig.parser
+        ? paramConfig.parser(inputValue)
+        : _parseDefaultNumber({
+            cliName,
+            paramName: paramConfig.name,
+            inputValue,
+          })
+      : typeof defaultValue === "number"
+        ? defaultValue
+        : undefined;
   if (parsedValue === undefined) {
     return undefined;
   }
@@ -164,12 +166,13 @@ function _parseBooleanValue(options: {
 }): boolean | undefined {
   const { cliName, inputValue, defaultValue, paramConfig } = options;
   const parsedValue =
-    inputValue !== undefined ?
-      paramConfig.parser ?
-        paramConfig.parser(inputValue)
-      : inputValue !== "false"
-    : typeof defaultValue === "boolean" ? defaultValue
-    : undefined;
+    inputValue !== undefined
+      ? paramConfig.parser
+        ? paramConfig.parser(inputValue)
+        : inputValue !== "false"
+      : typeof defaultValue === "boolean"
+        ? defaultValue
+        : undefined;
   if (parsedValue === undefined) {
     return undefined;
   }

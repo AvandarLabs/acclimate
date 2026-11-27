@@ -13,7 +13,7 @@ Node.js.
 - Relative imports omit file extensions (for example
   `import { createCli } from "./AcclimateCli"`). `tsconfig.json` uses
   `moduleResolution: "bundler"` with `allowImportingTsExtensions: false`,
-  ESLint enforces `import-x/extensions` (`never`), and `tsup` bundles
+  and `tsup` bundles
   `src/index.ts` to `dist/`.
 - `tsconfig.json` and `vitest.config.ts` configure `@/*` -> `src/*`, but prefer
   clean relative imports inside `src/` so internal dependencies stay explicit.
@@ -42,15 +42,15 @@ compatible with `tsx`, `tsup`, and modern Node.js:
 - Never read or mutate `process.env` deep inside parsing or formatting helpers;
   read environment checks (such as `NO_COLOR`) at one clear boundary and pass
   derived flags down.
-- Never leave a promise floating (enforced by ESLint
-  `@typescript-eslint/no-floating-promises`). Every promise is awaited,
+- Never leave a promise floating (not enforced by
+  oxlint: the project's lint config has no type-aware rules, so review for it). Every promise is awaited,
   returned, or explicitly handled.
 
 ## Errors
 
 - Throw `Error` instances (or `CliError` for user-facing argument, option, and
-  usage errors), never strings or plain objects (enforced by ESLint
-  `@typescript-eslint/only-throw-error`).
+  usage errors), never strings or plain objects (not enforced by
+  oxlint, so review for it).
 - When rethrowing, wrap and keep the original cause:
   `throw new Error("failed to parse config", { cause: error })`.
 - Catch only where you can add context, render a clean user-facing CLI error,

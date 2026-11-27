@@ -8,11 +8,9 @@
 - Source lives in `src/` as ESM TypeScript (`"type": "module"`). `tsup` bundles
   `src/index.ts` into dual ESM (`dist/index.js`) and CJS (`dist/index.cjs`)
   outputs plus `.d.ts` declarations targeting `node18`.
-- Tooling: `npm` for package management, `vitest` for tests, `eslint`
-  (`typescript-eslint`, `eslint-plugin-import-x`,
-  `eslint-plugin-unused-imports`) for linting, `prettier` (with
-  `@ianvs/prettier-plugin-sort-imports`) for formatting, `tsc --noEmit` for
-  type-checking, and `tsx` for running `examples/basic.ts`.
+- Tooling: `npm` for package management, `vitest` for tests, `oxlint` for
+  linting, `oxfmt` for formatting (including import sorting), `tsc --noEmit`
+  for type-checking, and `tsx` for running `examples/basic.ts`.
 - Runtime dependencies stay minimal (`change-case`, `ts-pattern`).
 
 ## Documentation
@@ -125,9 +123,10 @@ npm run demo            # run examples/basic.ts with tsx
 npm run type            # run the TypeScript compiler without emitting
 npm test                # run the test suite with vitest
 npm run test:watch      # run vitest in watch mode
-npm run lint            # lint with eslint
-npm run lint:fix        # lint and auto-fix with eslint
-npm run format          # format files with prettier
+npm run lint            # lint with oxlint
+npm run lint:fix        # lint and auto-fix with oxlint
+npm run format          # format files with oxfmt
+npm run format:check    # check formatting with oxfmt without writing
 ```
 
 Run `npm run type`, `npm run lint`, `npm test`, and `npm run build` before

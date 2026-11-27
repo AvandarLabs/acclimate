@@ -82,9 +82,9 @@ export async function runPlainChoiceMenu<TValue extends string>(
       const defaultBadge =
         item.value === defaultValue ? ` ${theme.muted("(default)")}` : "";
       const description =
-        item.description !== undefined ?
-          ` - ${theme.muted(item.description)}`
-        : "";
+        item.description !== undefined
+          ? ` - ${theme.muted(item.description)}`
+          : "";
       return `  ${idx + 1}. ${label}${defaultBadge}${description}`;
     }),
   ];

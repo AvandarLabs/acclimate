@@ -23,9 +23,10 @@ const LOCK_JSON = JSON.stringify({
  * scaffolder decides which skills install themselves, so what an empty project
  * expects follows that list rather than assuming impeccable is in it.
  */
-const IMPECCABLE_INSTALL_LABELS =
-  SELF_INSTALLING_SKILL_NAMES.includes(IMPECCABLE_SKILL_NAME) ?
-    ["impeccable install"]
+const IMPECCABLE_INSTALL_LABELS = SELF_INSTALLING_SKILL_NAMES.includes(
+  IMPECCABLE_SKILL_NAME,
+)
+  ? ["impeccable install"]
   : [];
 
 type RecordedRun = {

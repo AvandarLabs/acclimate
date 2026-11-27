@@ -35,12 +35,12 @@ function _createInteractiveTerminal(
     isTTY: true,
     isRaw: false,
     setRawMode:
-      options.isRawModeSupported !== false ?
-        (mode: boolean) => {
-          rawModeCalls.push(mode);
-          mockInput.isRaw = mode;
-        }
-      : undefined,
+      options.isRawModeSupported !== false
+        ? (mode: boolean) => {
+            rawModeCalls.push(mode);
+            mockInput.isRaw = mode;
+          }
+        : undefined,
   });
 
   const session: TerminalSession = {
@@ -92,10 +92,11 @@ describe("runCli - interactive menus, /dev/tty isolation, and unattended fallbac
       })
       .action(({ format, fix }) => {
         const rawChunk: unknown = pipedStdin.read();
-        const pipedContent =
-          Buffer.isBuffer(rawChunk) ? rawChunk.toString("utf8")
-          : typeof rawChunk === "string" ? rawChunk
-          : "";
+        const pipedContent = Buffer.isBuffer(rawChunk)
+          ? rawChunk.toString("utf8")
+          : typeof rawChunk === "string"
+            ? rawChunk
+            : "";
         stdout.write(`${JSON.stringify({ format, fix, pipedContent })}\n`);
       });
 
